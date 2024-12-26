@@ -1,20 +1,19 @@
-# Psicomanager FrontEnd Challenge
+# Psicomanager BackEnd Challenge
 
 ![Psicomanager](/logo_psicomanager.png)
 
-## Desafio
+## Case prático: Sistema de Gerenciamento de Tarefas
 
-O desafio consiste em implementar o fluxo de ativação do PsicoBank no PsicoManager, permitindo que os usuários configurem conta bancária e opções de cobrança de forma intuitiva. A solução deve ser responsiva, validar dados em tempo real e seguir fielmente o protótipo fornecido.
+Desenvolver uma API RestFull simples para o gerenciamento de tarefas. A aplicação deve permitir:
+1) Criar, listar, atualizar e excluir tarefas.
+2) Filtrar tarefas por status (pendente, em progresso, concluída).
+3) Registrar logs de eventos (como criação, atualização e exclusão de tarefas).
 
-Não utilizaremos nada do seu projeto além de avaliar suas habilidades.
+## Requisitos técnicos
 
-## Envio
-
-- Faça um fork deste repositório
-- Crie sua branch
-- ⚠️ Faça um commit inicial ao começar
-- ⚠️ Faça um commit final ao concluir
-- Quando terminar, envie um pull request para nós
+- Utilize a linguagem PHP 8.1+
+- Utilize o framework Laravel Lumen 10+ para desenvolver a API
+- Use um banco MySql
 
 ## Stack
 
