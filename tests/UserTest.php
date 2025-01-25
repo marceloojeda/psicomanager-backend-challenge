@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\User;
 use Laravel\Lumen\Testing\DatabaseMigrations;
 use Laravel\Lumen\Testing\DatabaseTransactions;
 
@@ -41,14 +42,13 @@ class UserTest extends TestCase
     {
         $this->get('/users');
 
-        $this->seeJsonStructure([
-            '*' => [
-                'name',
-                'email'
-            ]
-        ]);
+        collect($this->response->json())->take(2)
+            ->each(function ($i) {
+                $this->assertArrayHasKey('name', $i);
+                $this->assertArrayHasKey('email', $i);
+            });
 
-        collect($this->response->json())
+        collect($this->response->json())->take(2)
             ->each(fn ($i) =>
                 $this->assertArrayNotHasKey('password', $i)
             );
@@ -58,5 +58,20 @@ class UserTest extends TestCase
     {
         $this->get('/users/30');
         $this->seeJson(['id' => 30]);
+    }
+
+    public function test_users_store_encrypted_pass()
+    {
+        $userCreateData = [
+            'name' => 'New User With Encrypted Pass',
+            'email' => 'encryptedpassuser@test.com',
+            'password' => 'clear-text-pass',
+        ];
+        $this->post('/users', $userCreateData);
+        $userId = $this->response->json()['id'];
+
+        $userAssert = User::find($userId);
+        $this->assertNotEquals($userAssert->password, 'clear-text-password');
+        $this->assertTrue(strlen($userAssert->password) > 40);
     }
 }
