@@ -2,7 +2,6 @@
 
 /** @var \Laravel\Lumen\Routing\Router $router */
 
-use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,8 +19,12 @@ use Illuminate\Support\Facades\Route;
 //     return $router->app->version();
 // });
 
-$router->group(['prefix' => 'tasks'], function () use ($router) {
+$router->get('/clear', function () {
+    Cache::flush();
+    return 'Cache cleared!';
+});
 
+$router->group(['prefix' => 'tasks'], function () use ($router) {
     $router->get('/', 'TaskController@index');
 });
 

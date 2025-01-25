@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Application\Controllers;
 
-use App\Models\Task;
+use App\Application\Services\TaskService;
 use Illuminate\Http\Request;
+use App\Models\Task;
+use App\Http\Controllers\Controller;
 
 class TaskController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    private $taskService;
+
+    public function __construct(TaskService $taskService)
     {
+        $this->taskService = $taskService;
     }
 
     function index(Request $request)
@@ -39,5 +39,15 @@ class TaskController extends Controller
     {
         $task = Task::where('id', $taskId)->firstOrFail();
         return response()->json($task);
+    }
+
+    public function all(Request $request)
+    {
+        $userId = $request->input('user_id');
+        if ($userId) {
+            return response()->json($this->taskService->getTasksByUserId($userId));
+        } else {
+            return response()->json($this->taskService->getTasks());
+        }
     }
 }
