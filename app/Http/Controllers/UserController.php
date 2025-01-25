@@ -8,11 +8,18 @@ use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
-    function index()
+    function index(Request $request)
     {
-        $users = User::all();
+        $users = User::select();
 
-        return response()->json($users);
+        if (!empty($request->input('id'))) {
+            $users = $users->where(['id' => $request->input('id')]);
+        }
+        if (!empty($request->input('name'))) {
+            $users = $users->where(['name' => $request->input('name')]);
+        }
+
+        return response()->json($users->get());
     }
     
     function store(Request $request)
