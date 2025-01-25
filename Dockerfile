@@ -40,4 +40,14 @@ COPY ./ /var/www/html
 # Remove vendor e composer.lock
 RUN chown -R www-data storage
  
-RUN composer install
+#RUN composer install
+
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage \
+    && chmod -R 755 /var/www/html/bootstrap \
+    && chown -R www-data:www-data /var/www/html/storage/logs \
+    && chmod 777 -R /var/www/html
+
+ENTRYPOINT ["php-fpm"]
+
+EXPOSE 9000
