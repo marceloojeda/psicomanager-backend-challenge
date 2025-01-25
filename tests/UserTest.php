@@ -36,4 +36,21 @@ class UserTest extends TestCase
         $this->seeJson(['id' => $userData['id']]);
 
     }
+
+    public function test_users_get_prevent_password_output()
+    {
+        $this->get('/users');
+
+        $this->seeJsonStructure([
+            '*' => [
+                'name',
+                'email'
+            ]
+        ]);
+
+        collect($this->response->json())
+            ->each(fn ($i) =>
+                $this->assertArrayNotHasKey('password', $i)
+            );
+    }
 }
