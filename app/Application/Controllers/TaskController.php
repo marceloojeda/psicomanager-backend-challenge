@@ -16,7 +16,7 @@ class TaskController extends Controller
         $this->taskService = $taskService;
     }
 
-    function index(Request $request)
+    function index0(Request $request)
     {
         if (!empty($request->input('user_id'))) {
 
@@ -41,7 +41,7 @@ class TaskController extends Controller
         return response()->json($task);
     }
 
-    public function all(Request $request)
+    public function index(Request $request)
     {
         $userId = $request->input('user_id');
         if ($userId) {

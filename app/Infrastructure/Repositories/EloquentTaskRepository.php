@@ -26,7 +26,8 @@ class EloquentTaskRepository implements TaskRepositoryInterface
     {
         $eloquentTasks = EloquentTask::all();
         return $eloquentTasks->map(function ($task) {
-            return new Task($task->id, $task->user_id, $task->description);
+            $item = new Task($task->id, $task->user_id, $task->description);
+            return $item;
         })->toArray();
     }
 

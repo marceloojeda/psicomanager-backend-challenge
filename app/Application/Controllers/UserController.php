@@ -31,3 +31,27 @@ class UserController extends Controller
         return response()->json(['message' => 'User deleted']);
     }
 }
+
+
+function index()
+{
+    $users = User::all();
+
+    return response()->json($users);
+}
+
+function store(Request $request)
+{
+    $user = User::create($request->all());
+
+    return response()->json($user);
+}
+
+function delete($userId)
+{
+    $user = User::where('id', $userId)->firstOrFail();
+
+    $user->delete();
+
+    return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
+}
