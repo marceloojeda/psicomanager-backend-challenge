@@ -53,4 +53,10 @@ class UserTest extends TestCase
                 $this->assertArrayNotHasKey('password', $i)
             );
     }
+
+    public function test_users_find_by_id()
+    {
+        $this->get('/users/30');
+        $this->seeJson(['id' => 30]);
+    }
 }

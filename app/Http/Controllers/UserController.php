@@ -22,6 +22,11 @@ class UserController extends Controller
         return response()->json($users->get());
     }
     
+    function get($userId)
+    {
+        return response()->json(User::find($userId));
+    }
+
     function store(Request $request)
     {
         $user = User::create($request->all());
