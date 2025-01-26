@@ -4,7 +4,6 @@ namespace Tests;
 
 use App\Models\Task;
 use App\Models\User;
-use Laravel\Lumen\Testing\DatabaseMigrations;
 use Laravel\Lumen\Testing\DatabaseTransactions;
 
 class UserTest extends TestCase

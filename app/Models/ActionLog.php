@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Observers\TaskObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Task extends Model
+class ActionLog extends Model
 {
-    use HasFactory, TaskObserver;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -16,6 +15,6 @@ class Task extends Model
      * @var string[]
      */
     protected $fillable = [
-        'user_id', 'description', 'status'
+        'action', 'table', 'data', 'user_id',
     ];
 }
