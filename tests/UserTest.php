@@ -8,6 +8,7 @@ use Laravel\Lumen\Testing\DatabaseTransactions;
 
 class UserTest extends TestCase
 {
+    use DatabaseTransactions;
     /**
      * A basic test example.
      *
@@ -73,5 +74,27 @@ class UserTest extends TestCase
         $userAssert = User::find($userId);
         $this->assertNotEquals($userAssert->password, 'clear-text-password');
         $this->assertTrue(strlen($userAssert->password) > 40);
+    }
+
+    public function test_users_store_validations()
+    {
+        $userCreateData = [
+            'name' => 'sm',
+            'email' => 'emailinvalid'
+        ];
+        $this->post('/users', $userCreateData);
+        $this->assertResponseStatus(422);
+
+        $userCreateData = [
+            'name' => 'Some Valid User',
+            'email' => 'email@validuseremail.com',
+            'password' => 'abc123',
+        ];
+        $this->post('/users', $userCreateData);
+        $this->assertResponseStatus(200);
+
+        $this->post('/users', $userCreateData);
+        $this->assertResponseStatus(422);
+        $this->seeJson(['email' => ['The email has already been taken.']]);
     }
 }
