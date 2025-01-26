@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\Task;
 use App\Models\User;
 use Laravel\Lumen\Testing\DatabaseMigrations;
 use Laravel\Lumen\Testing\DatabaseTransactions;
@@ -96,5 +97,17 @@ class UserTest extends TestCase
         $this->post('/users', $userCreateData);
         $this->assertResponseStatus(422);
         $this->seeJson(['email' => ['The email has already been taken.']]);
+    }
+
+    public function test_users_delete()
+    {
+        $lastUser = User::orderByDesc('id')->first();
+        $this->delete('/users/' . $lastUser->id);
+        $this->assertResponseStatus(202);
+
+        $this->delete('/users/' . $lastUser->id);
+        $this->assertResponseStatus(404);
+
+        $this->assertTrue(Task::where('user_id', $lastUser->id)->count() === 0);
     }
 }

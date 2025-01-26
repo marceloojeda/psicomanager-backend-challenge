@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
@@ -49,10 +51,21 @@ class UserController extends Controller
 
     function delete($userId)
     {
-        $user = User::where('id', $userId)->firstOrFail();
+        try {
+            $user = User::where('id', $userId)->firstOrFail();
+            $user->delete();
+            Task::where('user_id', $user->id)->delete();
+        } catch (\Throwable $th) {
+            Log::critical('Erro ao excluir usuário: ' . $th->getMessage());
+            return response()->json([
+                'error' => true,
+                'message' => 'Erro ao excluir usuário',
+            ], Response::HTTP_NOT_FOUND);
+        }
 
-        $user->delete();
-
-        return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
+        return response()->json([
+            'success' => true,
+            'message' => 'Usuario excluido com sucesso'
+        ], Response::HTTP_ACCEPTED);
     }
 }
