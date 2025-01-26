@@ -23,13 +23,14 @@ use Illuminate\Support\Facades\Route;
 $router->group(['prefix' => 'tasks'], function () use ($router) {
 
     $router->get('/', 'TaskController@index');
+    $router->get('/{taskId:[0-9]+}', 'TaskController@get');
 });
 
 $router->group(['prefix' => 'users'], function () use ($router) {
 
     $router->get('/', 'UserController@index');
-    $router->get('/{userId}', 'UserController@get');
+    $router->get('/{userId:[0-9]+}', 'UserController@get');
     $router->post('/', 'UserController@store');
     $router->post('/', 'UserController@store');
-    $router->delete('/{userId}', 'UserController@delete');
+    $router->delete('/{userId:[0-9]+}', 'UserController@delete');
 });

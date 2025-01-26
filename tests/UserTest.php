@@ -27,7 +27,7 @@ class UserTest extends TestCase
         $this->seeJson(['name' => 'Testing New User']);
         $userData = $this->response->json();
 
-        $this->call('GET', '/users', ['name' => 'Testing New User']);
+        $this->call('GET', '/users', ['name' => 'ting New Us']);
         $this->assertResponseOk();
         $this->seeJson(['name' => 'Testing New User']);
         $this->assertGreaterThan(0, count($this->response->json()));
@@ -37,6 +37,9 @@ class UserTest extends TestCase
         $this->seeJson(['name' => 'Testing New User']);
         $this->seeJson(['id' => $userData['id']]);
 
+        // validação
+        $this->call('GET', '/users', ['name' => 'ew']);
+        $this->assertResponseStatus(422);
     }
 
     public function test_users_get_prevent_password_output()
@@ -108,5 +111,14 @@ class UserTest extends TestCase
         $this->assertResponseStatus(404);
 
         $this->assertTrue(Task::where('user_id', $lastUser->id)->count() === 0);
+    }
+
+    public function test_route_variable_type_validation()
+    {
+        $this->delete('/users/a5');
+        $this->assertResponseStatus(404);
+
+        $this->get('/users/a10');
+        $this->assertResponseStatus(404);
     }
 }

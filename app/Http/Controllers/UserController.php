@@ -16,17 +16,25 @@ class UserController extends Controller
     {
         $users = User::select();
 
+        $validation = Validator::make($request->all(), [
+            'id' => 'integer',
+            'name' => 'min:3|max:25'
+        ]);
+        if ($validation->fails()) {
+            return response($validation->errors(), 422);
+        }
+
         if (!empty($request->input('id'))) {
             $users = $users->where(['id' => $request->input('id')]);
         }
         if (!empty($request->input('name'))) {
-            $users = $users->where(['name' => $request->input('name')]);
+            $users = $users->where('name', 'like', '%'.$request->input('name').'%');
         }
 
         return response()->json($users->get());
     }
     
-    function get($userId)
+    function get(int $userId)
     {
         return response()->json(User::find($userId));
     }
@@ -49,14 +57,17 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    function delete($userId)
+    function delete(int $userId)
     {
         try {
             $user = User::where('id', $userId)->firstOrFail();
             $user->delete();
             Task::where('user_id', $user->id)->delete();
         } catch (\Throwable $th) {
-            Log::critical('Erro ao excluir usuário: ' . $th->getMessage());
+            Log::critical(
+                'Erro ao excluir usuário: ' . $th->getMessage() .
+                ' :: (' . $userId . ')'
+            );
             return response()->json([
                 'error' => true,
                 'message' => 'Erro ao excluir usuário',
