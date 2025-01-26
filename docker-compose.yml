@@ -27,6 +27,7 @@ services:
       - app-network
     command: >
       sh -c "
+      composer install &&
       php artisan migrate --force &&
       php-fpm
       "
