@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Cache;
+
 
 class UserController extends Controller
 {
@@ -20,6 +23,7 @@ class UserController extends Controller
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
+        $this->userService->setDataFromCollection(true);
     }
 
     /**
@@ -30,8 +34,31 @@ class UserController extends Controller
      */
     function index(Request $request): JsonResponse
     {
-        //$this->userService->setDataFromCollection(false);
+        Cache::flush();
         $data = $this->userService->getFilteredUsers($request->all());
+        return response()->json($data, $data['status']);
+    }
+
+    /**
+     * Obter usuário atraves do id.
+     *
+     * @param int $userId    Classe model User
+     * @return JsonResponse
+     */
+    function get(int $userId): JsonResponse
+    {
+        $data = [];
+
+        try {
+            $item = User::findOrFail($userId);
+            $data = $this->userService->getUser($item);
+            return response()->json($data, $data['status']);
+        } catch (ModelNotFoundException $e) {
+            $this->userService->setStatus(Response::HTTP_NOT_FOUND);
+            $this->userService->setMessage('Usuário não encontrado.');
+            $this->userService->setError($e->getMessage());
+        }
+
         return response()->json($data, $data['status']);
     }
 

@@ -18,7 +18,6 @@
 // });
 
 $router->group(['prefix' => 'tasks'], function () use ($router) {
-
     $router->get('/', 'TaskController@index');
 });
 

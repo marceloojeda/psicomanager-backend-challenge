@@ -36,7 +36,29 @@ class UserService extends ServiceResponse
             $this->setCollection(UserResource::class);
         } catch (Exception $e) {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
-            $this->setMessage('Erro ao processar a requisição. Tente novamente mais tarde.');
+            $this->setMessage('Erro ao listar usuários.Tente novamente mais tarde.');
+            $this->setError($e->getMessage());
+        }
+
+        return $this->getResponse();
+    }
+
+    /**
+     * Método para pegar unico usuário pelo id.
+     *
+     * @param User $user Model do usuario passado.
+     * @return array
+     */
+    public function getUser(User $user): array
+    {
+        try {
+            $this->setStatus(Response::HTTP_OK);
+            $this->setMessage('Usuários encontrado com sucesso!');
+            $this->setData($user->toArray());
+            $this->setCollection(UserResource::class);
+        } catch (Exception $e) {
+            $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->setMessage('Erro ao buscar o usuário. Tente novamente mais tarde.');
             $this->setError($e->getMessage());
         }
 

@@ -158,7 +158,13 @@ class ServiceResponse
     public function getCollection(): array
     {
         if (is_subclass_of($this->resourceClass, JsonResource::class) === true) {
-            $collection = $this->resourceClass::collection($this->data);
+            $isList = count(array_filter($this->data, 'is_array')) > 0;
+
+            if ($isList) {
+                $collection = $this->resourceClass::collection($this->data);
+            } else {
+                $collection = new $this->resourceClass($this->data);
+            }
 
             return (array) $collection;
         }
