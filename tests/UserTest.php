@@ -15,7 +15,7 @@ class UserTest extends TestCase
         $this->seeJsonStructure([
             'message',
             'data' => [
-                'resource' => ['*' =>
+                '*' =>
                     [
                         'id',
                         'name',
@@ -23,9 +23,6 @@ class UserTest extends TestCase
                         'created_at'
                     ]
                 ],
-                'with',
-                'additional',
-            ],
             'error',
             'status'
         ]);
@@ -45,18 +42,40 @@ class UserTest extends TestCase
         $response->seeJsonStructure([
             'message',
             'data' => [
-                'resource' => [
-                    'id',
-                    'name',
-                    'email',
-                    'created_at'
-                ],
-                'with',
-                'additional'
+                'id',
+                'name',
+                'email',
+                'created_at'
             ],
             'error',
             'status'
         ]);
     }
 
+    /**
+     * Testar a rota de cadastrar usuario na rota /users
+     */
+    public function test_that_endpoint_create_a_user_returns_a_successful_response(): void
+    {
+        $response = $this->post('users', [
+            'name' => 'John Doe',
+            'email' => 'johndoe22@example.com',
+            'password' => '12345678',
+            'password_confirmation' => '12345678'
+        ]);
+
+        $response->seeStatusCode(200);
+
+        $response->seeJsonStructure([
+            'message',
+            'data' => [
+                'id',
+                'name',
+                'email',
+                'created_at'
+            ],
+            'error',
+            'status'
+        ]);
+    }
 }
