@@ -59,7 +59,7 @@ class UserTest extends TestCase
     {
         $response = $this->post('users', [
             'name' => 'John Doe',
-            'email' => 'johndoe22@example.com',
+            'email' => 'johndoe222@example.com',
             'password' => '12345678',
             'password_confirmation' => '12345678'
         ]);
@@ -74,6 +74,26 @@ class UserTest extends TestCase
                 'email',
                 'created_at'
             ],
+            'error',
+            'status'
+        ]);
+    }
+
+
+    /**
+     * Testar a rota de cadastrar usuario na rota /users
+     */
+    public function test_that_endpoint_delete_a_user_returns_a_successful_response(): void
+    {
+        $user = User::first();
+
+        $response = $this->delete("users/{$user->id}");
+
+        $response->seeStatusCode(200);
+
+        $response->seeJsonStructure([
+            'message',
+            'data',
             'error',
             'status'
         ]);
