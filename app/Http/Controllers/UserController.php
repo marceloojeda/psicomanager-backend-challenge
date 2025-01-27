@@ -5,12 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Services\UserService;
 
 class UserController extends Controller
 {
-    function index()
+    protected $userService;
+
+    public function __construct(UserService $userService)
     {
-        $users = User::all();
+        $this->userService = $userService;
+    }
+
+    function index(Request $request)
+    {
+        $filters = [
+            'id' => $request->query('id'),
+            'name' => $request->query('name'),
+        ];
+
+        $users = $this->userService->getFilteredUsers($filters);
 
         return response()->json($users);
     }
