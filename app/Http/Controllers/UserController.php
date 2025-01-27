@@ -6,26 +6,32 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Services\UserService;
+use Illuminate\Http\JsonResponse;
 
 class UserController extends Controller
 {
     protected $userService;
 
+    /**
+     * Injeção de dependência do UserService no construtor.
+     *
+     * @param UserService $userService
+     */
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
     }
 
-    function index(Request $request)
+    /**
+     * Método responsável por retornar uma lista de usuários filtrados.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    function index(Request $request): JsonResponse
     {
-        $filters = [
-            'id' => $request->query('id'),
-            'name' => $request->query('name'),
-        ];
-
-        $users = $this->userService->getFilteredUsers($filters);
-
-        return response()->json($users);
+        $users = $this->userService->getFilteredUsers($request->all());
+        return response()->json($users, $users['status']);
     }
 
     function store(Request $request)

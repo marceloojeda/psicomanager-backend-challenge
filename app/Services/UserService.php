@@ -4,35 +4,40 @@ namespace App\Services;
 
 use App\Models\User;
 use Exception;
-use Illuminate\Support\Facades\Log;
 
-class UserService
+use Illuminate\Http\Response;
+use App\Services\ServiceResponse;
+
+class UserService extends ServiceResponse
 {
     /**
      * Método para filtrar usuários com base nos filtros fornecidos.
      *
      * @param array $filters Um array contendo os filtros (id e nome).
-     * @return \Illuminate\Database\Eloquent\Collection
-     * @throws Exception Se ocorrer um erro durante o processamento.
+     * @return array
      */
-    public function getFilteredUsers(array $filters)
+    public function getFilteredUsers(array $filters): array
     {
         try {
-            $query = User::query();
+            $object = User::when(!empty($filters['id']), function ($query) use ($filters) {
+                return $query->where('id', $filters['id']);
+            })
+            ->when(!empty($filters['name']), function ($query) use ($filters) {
+                return $query->where('name', 'like', '%' . $filters['name'] . '%');
+            })
+            ->get();
 
-            if (!empty($filters['id'])) {
-                $query->where('id', $filters['id']);
-            }
+            $data = $object->all();
 
-            if (!empty($filters['name'])) {
-                $query->where('name', 'like', '%' . $filters['name'] . '%');
-            }
-
-            return $query->get();
+            $this->setStatus(Response::HTTP_OK);
+            $this->setMessage('Usuários listados com sucesso!');
+            $this->setData($data);
         } catch (Exception $e) {
-            Log::error('Erro ao filtrar usuários: ' . $e->getMessage());
-
-            throw new Exception('Erro ao processar a requisição. Tente novamente mais tarde.');
+            $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->setMessage('Erro ao processar a requisição. Tente novamente mais tarde.');
+            $this->setError($e->getMessage());
         }
+
+        return $this->getResponse();
     }
 }

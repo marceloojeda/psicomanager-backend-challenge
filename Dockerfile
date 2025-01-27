@@ -23,14 +23,13 @@ RUN apt-get -y update \
     && apt-get install -y libssl-dev pkg-config libzip-dev unzip git \
     && apt-get install -y libmagickwand-dev imagemagick --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
- 
+
 RUN pecl install zlib zip imagick \
     && docker-php-ext-enable zip \
     && docker-php-ext-enable imagick
 
+RUN docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable pdo_mysql
 
-RUN docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable pdo_mysql    
- 
 # Install composer (updated via entry point)
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
@@ -49,10 +48,10 @@ RUN echo "xdebug.mode=debug\n\
 
 # Copy the application code into the container
 COPY ./ /var/www/html
- 
+
 # Remove vendor e composer.lock
 RUN chown -R www-data storage
- 
+
 #RUN composer install
 
 RUN chown -R www-data:www-data /var/www/html \

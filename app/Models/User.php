@@ -21,4 +21,11 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
     protected $fillable = [
         'name', 'email', 'password',
     ];
+
+    protected $dates = ['created_at'];
+
+    public function getCreatedAtAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('d/m/Y');
+    }
 }
