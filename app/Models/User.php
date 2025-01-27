@@ -29,8 +29,21 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 
     protected $dates = ['created_at'];
 
+
+    //protected $with = ['tasks'];
+
     public function getCreatedAtAttribute($value)
     {
         return \Carbon\Carbon::parse($value)->format('d/m/Y');
+    }
+
+    /**
+     * Tarefas de um usuário
+     *
+     * @return mixed
+     */
+    public function tasks()
+    {
+        return $this->hasMany(Task::class, 'user_id');
     }
 }

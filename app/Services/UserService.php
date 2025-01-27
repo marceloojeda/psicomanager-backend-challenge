@@ -13,6 +13,7 @@ use App\Http\Requests\UserRequest;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserService extends ServiceResponse
 {
@@ -152,5 +153,42 @@ class UserService extends ServiceResponse
 
             return false;
         }
+    }
+
+    /**
+     * Método para excluir usuario.
+     *
+     * @param int $id ID usuario para excluir.
+     * @return bool
+     */
+    public function deleteUser(int $id): bool
+    {
+        try {
+            DB::beginTransaction();
+
+            $user = User::where('id', $id)->firstOrFail();
+            $user->delete();
+
+            $this->setStatus(Response::HTTP_OK);
+            $this->setMessage('Usuário deletado com sucesso!');
+
+            DB::commit();
+            return true;
+
+        } catch (ModelNotFoundException $e) {
+            DB::rollback();
+
+            $this->setStatus(Response::HTTP_NOT_FOUND);
+            $this->setMessage('Usuário não encontrado.');
+            $this->setError($e->getMessage());
+        } catch (Exception $e) {
+            DB::rollback();
+
+            $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->setMessage('Erro ao excluir usuário. Tente novamente mais tarde.');
+            $this->setError($e->getMessage());
+        }
+
+        return false;
     }
 }

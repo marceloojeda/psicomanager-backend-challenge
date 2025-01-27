@@ -74,12 +74,15 @@ class UserController extends Controller
         return $this->userService->getJsonResponse();
     }
 
-    function delete($userId)
+    /**
+     * Excluir usuário.
+     *
+     * @param int $userId   ID do usuario para excluir.
+     * @return JsonResponse
+     */
+    function delete(int $userId): JsonResponse
     {
-        $user = User::where('id', $userId)->firstOrFail();
-
-        $user->delete();
-
-        return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
+        $this->userService->deleteUser($userId);
+        return $this->userService->getJsonResponse();
     }
 }
