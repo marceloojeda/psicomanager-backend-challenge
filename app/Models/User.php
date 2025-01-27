@@ -13,8 +13,6 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 {
     use Authenticatable, Authorizable, HasFactory;
 
-    protected $primaryKey = 'id';
-
     /**
      * The attributes that are mass assignable.
      *
@@ -24,15 +22,15 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         'name', 'email', 'password',
     ];
 
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     protected $dates = ['created_at'];
 
     public function getCreatedAtAttribute($value)
     {
         return \Carbon\Carbon::parse($value)->format('d/m/Y');
-    }
-
-    public function getRouteKeyName()
-    {
-        return 'id';
     }
 }

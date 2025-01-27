@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Response;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\JsonResponse;
 
 class ServiceResponse
 {
@@ -21,7 +22,7 @@ class ServiceResponse
     private array $data = [];
 
     // Instancia de resource para formatar dados
-    private ?string $resourceClass;
+    private string $resourceClass = '';
 
     // Se na resposta o $data precisa precisa retornar ou somente os dados formatados
     private bool $data_from_collection = true;
@@ -141,7 +142,7 @@ class ServiceResponse
      * @param JsonResource $resource
      * @return void
      */
-    public function setCollection(string $resourceClass): void
+    public function setResource(string $resourceClass): void
     {
         if (is_subclass_of($resourceClass, JsonResource::class) === false) {
             Log::error("O recurso deve ser uma instância de JsonResource.");
@@ -157,17 +158,26 @@ class ServiceResponse
      */
     public function getCollection(): array
     {
-        if (is_subclass_of($this->resourceClass, JsonResource::class) === true) {
-            $isList = count(array_filter($this->data, 'is_array')) > 0;
+        if (
+            empty($this->resourceClass) === false &&
+            is_subclass_of($this->resourceClass, JsonResource::class
+        ) === true) {
+            $isList = array_filter($this->data, fn($item) => is_object($item)) !== []
+                || array_filter($this->data, fn($item) => is_array($item)) !== [];
 
             if ($isList) {
-                $collection = $this->resourceClass::collection($this->data);
+                $collection = $this->resourceClass::collection((array) $this->data);
             } else {
-                $collection = new $this->resourceClass($this->data);
+                $collection = new $this->resourceClass((array) $this->data);
             }
 
-            return (array) $collection;
+            return (array) $collection->resolve();
         }
+
+        if (empty($this->data) === false) {
+            return $this->data;
+        }
+
         return [];
     }
 
@@ -184,5 +194,16 @@ class ServiceResponse
             'error' => $this->getError(),
             'status' => $this->getStatus()
         ];
+    }
+
+    /**
+     * Retornar resposta em Json.
+     *
+     * @return JsonResponse
+     */
+    public function getJsonResponse(): JsonResponse
+    {
+        $data = $this->getResponse();
+        return response()->json($data, $data['status']);
     }
 }

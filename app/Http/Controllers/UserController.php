@@ -34,9 +34,8 @@ class UserController extends Controller
      */
     function index(Request $request): JsonResponse
     {
-        Cache::flush();
-        $data = $this->userService->getFilteredUsers($request->all());
-        return response()->json($data, $data['status']);
+        $this->userService->getFilteredUsers($request->all());
+        return $this->userService->getJsonResponse();
     }
 
     /**
@@ -47,26 +46,32 @@ class UserController extends Controller
      */
     function get(int $userId): JsonResponse
     {
-        $data = [];
-
         try {
             $item = User::findOrFail($userId);
-            $data = $this->userService->getUser($item);
-            return response()->json($data, $data['status']);
+            $this->userService->getUser($item);
         } catch (ModelNotFoundException $e) {
             $this->userService->setStatus(Response::HTTP_NOT_FOUND);
             $this->userService->setMessage('Usuário não encontrado.');
             $this->userService->setError($e->getMessage());
         }
 
-        return response()->json($data, $data['status']);
+        return $this->userService->getJsonResponse();
     }
 
-    function store(Request $request)
+    /**
+     * Cadastrar novo usuário.
+     *
+     * @param Request $request Dados usuario para salvar.
+     * @return JsonResponse
+     */
+    function store(Request $request): JsonResponse
     {
-        $user = User::create($request->all());
+        $passed = $this->userService->validateUser($request);
 
-        return response()->json($user);
+        if ($passed === true)
+            $this->userService->createUser($request->all());
+
+        return $this->userService->getJsonResponse();
     }
 
     function delete($userId)
