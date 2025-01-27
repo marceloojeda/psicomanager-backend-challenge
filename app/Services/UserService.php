@@ -7,6 +7,7 @@ use Exception;
 
 use Illuminate\Http\Response;
 use App\Services\ServiceResponse;
+use App\Http\Resources\UserResource;
 
 class UserService extends ServiceResponse
 {
@@ -32,6 +33,7 @@ class UserService extends ServiceResponse
             $this->setStatus(Response::HTTP_OK);
             $this->setMessage('Usuários listados com sucesso!');
             $this->setData($data);
+            $this->setCollection(UserResource::class);
         } catch (Exception $e) {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao processar a requisição. Tente novamente mais tarde.');

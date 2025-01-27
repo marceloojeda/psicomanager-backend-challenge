@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Response;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class ServiceResponse
 {
@@ -19,6 +20,11 @@ class ServiceResponse
     // Dados enviados na resposta
     private array $data = [];
 
+    // Instancia de resource para formatar dados
+    private ?string $resourceClass;
+
+    // Se na resposta o $data precisa precisa retornar ou somente os dados formatados
+    private bool $data_from_collection = true;
     /**
      * Pega o codigo de erro.
      *
@@ -68,6 +74,10 @@ class ServiceResponse
      */
     public function getData(): array
     {
+        if ($this->getDataFromCollection() === true) {
+            return $this->getCollection();
+        }
+
         return $this->data;
     }
 
@@ -105,6 +115,57 @@ class ServiceResponse
     }
 
     /**
+     * Retornar collection com dados formatados.
+     *
+     * @return bool
+     */
+    public function getDataFromCollection(): bool
+    {
+        return $this->data_from_collection;
+    }
+
+    /**
+     * Se é pra retornar collection com dados formatados.
+     *
+     * @param bool $data_from_collection
+     * @return void
+     */
+    public function setDataFromCollection(bool $data_from_collection): void
+    {
+        $this->data_from_collection = $data_from_collection;
+    }
+
+    /**
+     * Configura dados formatados do resource.
+     *
+     * @param JsonResource $resource
+     * @return void
+     */
+    public function setCollection(string $resourceClass): void
+    {
+        if (is_subclass_of($resourceClass, JsonResource::class) === false) {
+            Log::error("O recurso deve ser uma instância de JsonResource.");
+        }
+
+        $this->resourceClass = $resourceClass;
+    }
+
+    /**
+     * Pega dados formatados do resource.
+     *
+     * @return array
+     */
+    public function getCollection(): array
+    {
+        if (is_subclass_of($this->resourceClass, JsonResource::class) === true) {
+            $collection = $this->resourceClass::collection($this->data);
+
+            return (array) $collection;
+        }
+        return [];
+    }
+
+    /**
      * Retornar resposta.
      *
      * @return array
@@ -115,7 +176,7 @@ class ServiceResponse
             'message' => $this->getMessage(),
             'data' => $this->getData(),
             'error' => $this->getError(),
-            'status' => $this->getStatus(),
+            'status' => $this->getStatus()
         ];
     }
 }

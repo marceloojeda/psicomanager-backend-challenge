@@ -30,8 +30,9 @@ class UserController extends Controller
      */
     function index(Request $request): JsonResponse
     {
-        $users = $this->userService->getFilteredUsers($request->all());
-        return response()->json($users, $users['status']);
+        //$this->userService->setDataFromCollection(false);
+        $data = $this->userService->getFilteredUsers($request->all());
+        return response()->json($data, $data['status']);
     }
 
     function store(Request $request)
