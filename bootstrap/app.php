@@ -95,9 +95,6 @@ $app->configure('app');
 // $app->register(App\Providers\AuthServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
 
-$app->bind(App\Domain\Repositories\TaskRepositoryInterface::class, App\Infrastructure\Repositories\EloquentTaskRepository::class);
-$app->bind(App\Domain\Repositories\UserRepositoryInterface::class, App\Infrastructure\Repositories\EloquentUserRepository::class);
-
 /*
 |--------------------------------------------------------------------------
 | Load The Application Routes
@@ -110,7 +107,7 @@ $app->bind(App\Domain\Repositories\UserRepositoryInterface::class, App\Infrastru
 */
 
 $app->router->group([
-    'namespace' => 'App\Application\Controllers',
+    'namespace' => 'App\Http\Controllers',
 ], function ($router) {
     require __DIR__.'/../routes/web.php';
 });

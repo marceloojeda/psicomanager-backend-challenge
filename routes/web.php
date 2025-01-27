@@ -2,8 +2,6 @@
 
 /** @var \Laravel\Lumen\Routing\Router $router */
 
-use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | Application Routes
@@ -19,12 +17,8 @@ use Illuminate\Support\Facades\Route;
 //     return $router->app->version();
 // });
 
-$router->get('/clear', function () {
-    Cache::flush();
-    return 'Cache cleared!';
-});
-
 $router->group(['prefix' => 'tasks'], function () use ($router) {
+
     $router->get('/', 'TaskController@index');
 });
 
