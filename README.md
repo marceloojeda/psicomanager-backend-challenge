@@ -15,7 +15,7 @@ REDIS_CACHE_DB=0
 REDIS_CLIENT=predis
 ```
 
-- Suba os contêineres um de cada vez, na ordem mysql / php / nginx, ou então execute ```docker composer up``` seguidas vezes (utilizando ctrl+c em cada vez, por ex.)
+- Suba os contêineres um de cada vez, na ordem mysql / php / nginx, ou então execute ```docker composer up -d``` seguidas vezes (utilizando ctrl+c em cada vez, por ex.)
 
 - *Obs: mais detalhes sobre os problemas com o ambiente em docker no ```SOLUTION.md```
 
