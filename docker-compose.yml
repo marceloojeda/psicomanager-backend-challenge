@@ -27,6 +27,7 @@ services:
       - app-network
     command: >
       sh -c "
+      composer install &&
       php artisan migrate --force &&
       php-fpm
       "
@@ -43,6 +44,15 @@ services:
       - "3306:3306"
     networks:
       - app-network
+
+  redis:
+      image: 'redis:7.4'
+      command: redis-server --loglevel warning
+      volumes:
+        - ./cache-data-volume:/data
+      networks:
+        - app-network
+
 
 networks:
   app-network:

@@ -1,6 +1,13 @@
 # Base PHP 8.1 com suporte FPM
 FROM php:8.1-fpm
 
+# Cria usuário para poder executar a aplicação, e comandos, sem ser como root
+RUN USEUID=1000; \
+    if [ "$(getent passwd $USEUID)" = "" ];then \
+        useradd -u $USEUID appuser -m; \
+        usermod -a -G www-data appuser; \
+    fi
+
 # Instalar dependências de sistema
 RUN apt-get update && apt-get install -y \
     libzip-dev zip unzip \
@@ -11,9 +18,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Define o diretório de trabalho
 WORKDIR /var/www/html
-
-# Copiar o projeto para o contêiner
-COPY ./ /var/www/html
 
 # Instalar dependências do Lumen
 RUN apt-get -y update \
@@ -28,16 +32,7 @@ RUN pecl install zlib zip imagick \
 
 RUN docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable pdo_mysql    
  
-# Install composer (updated via entry point)
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
 # RUN mkdir -p /var/www/logs && \
 #     chmod 777 /var/www/logs
 
-# Copy the application code into the container
-COPY ./ /var/www/html
- 
-# Remove vendor e composer.lock
-RUN chown -R www-data storage
- 
-RUN composer install
+USER appuser

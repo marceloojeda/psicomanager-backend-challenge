@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
 
 class TaskController extends Controller
 {
@@ -18,24 +20,29 @@ class TaskController extends Controller
 
     function index(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'integer',
+        ]);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
         if (!empty($request->input('user_id'))) {
 
-            $results = Task::where(['user_id' => $request->input('user_id')])->get();
+            $results = Cache::remember('getTasksPerUserId:'.$request->input('user_id'), 120, function () use ($request) {
+                return Task::where(['user_id' => $request->input('user_id')])->get();
+            });
         } else {
 
-            $results = Task::all();
+            $results = Cache::remember('getAllTasks', 120, function () {
+                return Task::all();
+            });
         }
 
-        $retorno = [];
-        foreach ($results as $task) {
-
-            $retorno[] = $task->toArray();
-        }
-
-        return response()->json($retorno);
+        return response()->json($results);
     }
 
-    function get($taskId)
+    function get(int $taskId)
     {
         $task = Task::where('id', $taskId)->firstOrFail();
         return response()->json($task);
