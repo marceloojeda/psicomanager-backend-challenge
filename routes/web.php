@@ -19,6 +19,7 @@
 
 $router->group(['prefix' => 'tasks'], function () use ($router) {
     $router->get('/', 'TaskController@index');
+    $router->get('/{taskId}', 'TaskController@get');
 });
 
 $router->group(['prefix' => 'users'], function () use ($router) {

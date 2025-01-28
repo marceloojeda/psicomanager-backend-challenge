@@ -34,6 +34,7 @@ class UserController extends Controller
      */
     function index(Request $request): JsonResponse
     {
+        Cache::flush();
         $this->userService->getFilteredUsers($request->all());
         return $this->userService->getJsonResponse();
     }
@@ -46,15 +47,7 @@ class UserController extends Controller
      */
     function get(int $userId): JsonResponse
     {
-        try {
-            $item = User::findOrFail($userId);
-            $this->userService->getUser($item);
-        } catch (ModelNotFoundException $e) {
-            $this->userService->setStatus(Response::HTTP_NOT_FOUND);
-            $this->userService->setMessage('Usuário não encontrado.');
-            $this->userService->setError($e->getMessage());
-        }
-
+        $this->userService->getUser($userId);
         return $this->userService->getJsonResponse();
     }
 

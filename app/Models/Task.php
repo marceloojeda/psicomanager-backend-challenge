@@ -20,6 +20,13 @@ class Task extends Model
 
     //protected $with = ['user'];
 
+    protected $dates = ['created_at'];
+
+    public function getCreatedAtAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('d/m/Y');
+    }
+
     /**
      * Usuário dondo da Tarefa
      *

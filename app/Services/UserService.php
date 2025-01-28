@@ -54,25 +54,32 @@ class UserService extends ServiceResponse
     /**
      * Método para pegar unico usuário pelo id.
      *
-     * @param User $user Model do usuario passado.
+     * @param int $id ID do usuario passado.
      * @return bool
      */
-    public function getUser(User $user): bool
+    public function getUser(int $id): bool
     {
         try {
+            $user = User::where('id', $id)->firstOrFail();
+
             $this->setStatus(Response::HTTP_OK);
-            $this->setMessage('Usuários encontrado com sucesso!');
+            $this->setMessage('Usuário encontrado com sucesso!');
             $this->setData($user->toArray());
             $this->setResource(UserResource::class);
 
             return true;
+
+        } catch (ModelNotFoundException $e) {
+            $this->setStatus(Response::HTTP_NOT_FOUND);
+            $this->setMessage('Usuário não encontrado.');
+            $this->setError($e->getMessage());
         } catch (Exception $e) {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
-            $this->setMessage('Erro ao buscar o usuário. Tente novamente mais tarde.');
+            $this->setMessage('Erro ao buscar usuário. Tente novamente mais tarde.');
             $this->setError($e->getMessage());
-
-            return false;
         }
+
+        return false;
     }
 
     /**

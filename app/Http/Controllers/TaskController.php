@@ -4,40 +4,46 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Services\TaskService;
+use Illuminate\Http\JsonResponse;
 
 class TaskController extends Controller
 {
+    protected $taskService;
+
     /**
-     * Create a new controller instance.
+     * Injeção de dependência do TaskService no construtor.
      *
-     * @return void
+     * @param TaskService $taskService
      */
-    public function __construct()
+    public function __construct(TaskService $taskService)
     {
+        $this->taskService = $taskService;
+        $this->taskService->setDataFromCollection(true);
     }
 
-    function index(Request $request)
+    /**
+     * Método responsável por retornar uma lista de usuários filtrados.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    function index(Request $request): JsonResponse
     {
-        if (!empty($request->input('user_id'))) {
-
-            $results = Task::where(['user_id' => $request->input('user_id')])->get();
-        } else {
-
-            $results = Task::all();
-        }
-
-        $retorno = [];
-        foreach ($results as $task) {
-
-            $retorno[] = $task->toArray();
-        }
-
-        return response()->json($retorno);
+        $this->taskService->getFilteredTasks($request->all());
+        return $this->taskService->getJsonResponse();
     }
 
-    function get($taskId)
+    /**
+     * Obter tarefa atraves do id.
+     *
+     * @param int $taskId    ID da tarefa
+     * @return JsonResponse
+     */
+    function get(int $taskId): JsonResponse
     {
-        $task = Task::where('id', $taskId)->firstOrFail();
-        return response()->json($task);
+        $this->taskService->getTask($taskId);
+        return $this->taskService->getJsonResponse();
     }
 }
