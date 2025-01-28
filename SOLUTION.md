@@ -41,6 +41,11 @@
 
 - Foram criados testes para praticamente todos os recursos, exceto para o teste de desempenho do endoint GET /tasks?userId{id}
 
+## Cache
+
+- Foi implementado Cache por tempo, utilizando o Redis. Com poucos minutos de validade para um suposto cenário que tenha modificações frequentes. Uma implementação mais adequada seria adicionar uma rotina para atualizar de forma assíncrona o cache, que pode ser disparada por um agendamento no crontab ou sempre que um novo registro for adicionado no banco de dados, sem depender do tempo de validade para se atualizar e assim não correr o risco de trazer informações desatualizadas.
+
+
 ## Docker / Ambiente dev
 
 ### Ajustes para execução do ambiente de desenvolvimento de forma independente do sistema operacional hospedeiro

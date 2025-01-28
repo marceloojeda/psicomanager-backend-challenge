@@ -45,6 +45,15 @@ services:
     networks:
       - app-network
 
+  redis:
+      image: 'redis:7.4'
+      command: redis-server --loglevel warning
+      volumes:
+        - ./cache-data-volume:/data
+      networks:
+        - app-network
+
+
 networks:
   app-network:
     driver: bridge
