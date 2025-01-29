@@ -5,6 +5,7 @@ namespace App\Infrastructure\Persistence\Repositories;
 use App\Domain\Interfaces\UserRepositoryInterface;
 use App\Domain\Entities\UserEntity;
 use App\Infrastructure\Persistence\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class UserRepository implements UserRepositoryInterface {
 
@@ -37,7 +38,11 @@ class UserRepository implements UserRepositoryInterface {
     }
 
     public function createUserRepository(array $data): UserEntity {
-        $user = User::create($data);
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+        ]);
 
         return new UserEntity(
             id: $user->id,
@@ -46,5 +51,13 @@ class UserRepository implements UserRepositoryInterface {
             createdAt: $user->createdAt
         );
     }
+
+    public function deleteUserRepository(int $id): bool {
+        $user = User::where('id', $id)->firstOrFail();
+        $user->delete();
+
+        return true;
+    }
+
 }
 

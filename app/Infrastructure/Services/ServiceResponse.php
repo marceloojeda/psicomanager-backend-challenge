@@ -85,8 +85,6 @@ class ServiceResponse
             } elseif (empty($this->collection) === false) {
                 return $this->getCollection();
             }
-
-            return [];
         }
 
         return $this->data;
@@ -193,7 +191,7 @@ class ServiceResponse
     {
         if ($this->validateResource() === false) return [];
 
-        $resourceCollection = new $this->resourceClass((array) $this->collectionItem);
+        $resourceCollection = new $this->resourceClass($this->collectionItem);
         $this->data = $resourceCollection->resolve();
         return $this->data;
     }
@@ -228,36 +226,6 @@ class ServiceResponse
         }
 
         return false;
-    }
-
-    /**
-     * Pega dados formatados do resource.
-     *
-     * @return array
-     */
-    public function getCollection2(): array
-    {
-        if (
-            empty($this->resourceClass) === false &&
-            is_subclass_of($this->resourceClass, JsonResource::class
-        ) === true) {
-            $isList = array_filter($this->data, fn($item) => is_object($item)) !== []
-                || array_filter($this->data, fn($item) => is_array($item)) !== [];
-
-            if ($isList) {
-                $collection = $this->resourceClass::collection((array) $this->data);
-            } else {
-                $collection = new $this->resourceClass((array) $this->data);
-            }
-
-            return (array) $collection->resolve();
-        }
-
-        if (empty($this->data) === false) {
-            return $this->data;
-        }
-
-        return [];
     }
 
     /**

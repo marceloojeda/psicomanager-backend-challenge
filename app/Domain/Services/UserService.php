@@ -8,7 +8,6 @@ use App\Application\Resources\UserResource;
 use Exception;
 
 use App\Infrastructure\Services\ServiceResponse;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +63,6 @@ class UserService extends ServiceResponse {
             return true;
 
         } catch (ModelNotFoundException $e) {
-            throw new Exception("Tarefa não encontrada!");
             $this->setStatus(Response::HTTP_NOT_FOUND);
             $this->setMessage('Usuário não encontrado.');
             $this->setError($e->getMessage());
@@ -96,15 +94,11 @@ class UserService extends ServiceResponse {
 
             DB::beginTransaction();
 
-            $user = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-            ]);
+            $data = $this->userRepository->createUserRepository($data);
 
             $this->setStatus(Response::HTTP_OK);
             $this->setMessage('Usuário cadastrado com sucesso!');
-            $this->setData($user->toArray());
+            $this->setCollectionItem($data);
             $this->setResource(UserResource::class);
 
             DB::commit();
@@ -168,8 +162,7 @@ class UserService extends ServiceResponse {
         try {
             DB::beginTransaction();
 
-            $user = User::where('id', $id)->firstOrFail();
-            $user->delete();
+            $this->userRepository->deleteUserRepository($id);
 
             $this->setStatus(Response::HTTP_OK);
             $this->setMessage('Usuário deletado com sucesso!');
