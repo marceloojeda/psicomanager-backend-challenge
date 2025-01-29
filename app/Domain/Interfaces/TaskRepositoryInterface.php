@@ -23,8 +23,8 @@ interface TaskRepositoryInterface {
     /**
      * Obtém uma lista de tarefas filtradas de acordo com os critérios fornecidos.
      *
-     * @param array $filters Array associativo com os filtros que serão aplicados à busca das tarefas.
+     * @param array $params Array associativo com os parametros para busca e definição de pagina e quantidade.
      * @return TaskEntity[] Lista de tarefas que atendem aos filtros fornecidos.
      */
-    public function getFilteredTasks(array $filters): array;
+    public function getFilteredTasks(array $params): array;
 }

@@ -23,6 +23,7 @@ services:
     working_dir: /var/www/html
     depends_on:
       - mysql
+      - redis
     networks:
       - app-network
 
@@ -43,9 +44,22 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  redis:
+    image: redis:alpine
+    container_name: redis_container
+    ports:
+      - "6388:6379"
+    expose:
+      - 6388
+    networks:
+      - app-network
+    volumes:
+      - redis_data:/data
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
   mysql_data:
+  redis_data:

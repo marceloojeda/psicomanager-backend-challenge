@@ -10,7 +10,7 @@ class TaskTest extends TestCase
      */
     public function test_that_endpoint_tasks_returns_a_successful_response(): void
     {
-        $this->get("tasks?user_id=9", []);
+        $this->get("tasks", []);
 
         $this->seeStatusCode(200);
         $this->seeJsonStructure([
