@@ -1,7 +1,8 @@
 <?php
 
 namespace Tests;
-use \App\Models\User;
+use App\Infrastructure\Persistence\Models\User;
+use Illuminate\Support\Facades\Exceptions;
 
 class UserTest extends TestCase
 {
@@ -10,7 +11,9 @@ class UserTest extends TestCase
      */
     public function test_that_endpoint_users_returns_a_successful_response(): void
     {
-        $this->get("users", []);
+        $response = $this->get("users", []);
+
+
         $this->seeStatusCode(200);
         $this->seeJsonStructure([
             'message',
@@ -20,7 +23,7 @@ class UserTest extends TestCase
                         'id',
                         'name',
                         'email',
-                        'created_at'
+                        'createdAt'
                     ]
                 ],
             'error',
@@ -45,7 +48,7 @@ class UserTest extends TestCase
                 'id',
                 'name',
                 'email',
-                'created_at'
+                'createdAt'
             ],
             'error',
             'status'
@@ -59,7 +62,7 @@ class UserTest extends TestCase
     {
         $response = $this->post('users', [
             'name' => 'John Doe',
-            'email' => 'johndoe222@example.com',
+            'email' => 'johdndoe222@example.com',
             'password' => '12345678',
             'password_confirmation' => '12345678'
         ]);
@@ -72,7 +75,7 @@ class UserTest extends TestCase
                 'id',
                 'name',
                 'email',
-                'created_at'
+                'createdAt'
             ],
             'error',
             'status'
