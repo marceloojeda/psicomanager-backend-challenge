@@ -160,7 +160,7 @@ class ServiceResponse
     }
 
     /**
-     * Configura dados formatados do resource.
+     * Configura uma lista. Ex: lista de usuarios e tarefas.
      *
      * @param JsonResource $resource
      * @return void
@@ -171,7 +171,7 @@ class ServiceResponse
     }
 
     /**
-     * Configura dados formatados do resource.
+     * Configura item. Ex: objeto da classe User e Task.
      *
      * @param JsonResource $resource
      * @return void
@@ -181,8 +181,8 @@ class ServiceResponse
         $this->collectionItem = $collectionItem;
     }
 
-        /**
-     * Configura dados formatados do resource.
+    /**
+     * Pega um item.
      *
      * @param JsonResource $resource
      * @return void
@@ -197,7 +197,7 @@ class ServiceResponse
     }
 
     /**
-     * Configura dados formatados do resource.
+     * Pega uma lista. Ex: lista de usuarios ou tarefas.
      *
      * @param JsonResource $resource
      * @return void
@@ -212,7 +212,8 @@ class ServiceResponse
     }
 
     /**
-     * Pega dados formatados do resource.
+     * Valida que foi configurado o resource. Ex: UserResource ou TaskResource.
+     * Pois o getCollectionItem e getCollection precisa do resource para formatar os dados.
      *
      * @return bool
      */
