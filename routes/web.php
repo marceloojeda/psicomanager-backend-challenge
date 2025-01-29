@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 // });
 
 $router->group(['prefix' => 'tasks'], function () use ($router) {
-
+    $router->get('/{taskId}', 'TaskController@get');
     $router->get('/', 'TaskController@index');
 });
 
@@ -29,7 +29,6 @@ $router->group(['prefix' => 'users'], function () use ($router) {
 
     $router->get('/', 'UserController@index');
     $router->get('/{userId}', 'UserController@get');
-    $router->post('/', 'UserController@store');
     $router->post('/', 'UserController@store');
     $router->delete('/{userId}', 'UserController@delete');
 });
