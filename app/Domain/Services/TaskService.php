@@ -1,11 +1,11 @@
 <?php
 
-namespace Domain\Services;
+namespace App\Domain\Services;
 
-use Domain\Interfaces\TaskRepositoryInterface;
-use Infrastructure\Services\ServiceResponse;
+use App\Domain\Interfaces\TaskRepositoryInterface;
+use App\Infrastructure\Services\ServiceResponse;
 use Illuminate\Http\Response;
-use Application\Resources\TaskResource;
+use App\Application\Resources\TaskResource;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -48,9 +48,6 @@ class TaskService extends ServiceResponse {
     {
         try {
             $data = $this->taskRepository->getTask($id);
-
-            if (is_null($data) === true)
-                throw new ModelNotFoundException("Tarefa não encontrada!");
 
             $this->setStatus(Response::HTTP_OK);
             $this->setMessage('Tarefa encontrada com sucesso!');

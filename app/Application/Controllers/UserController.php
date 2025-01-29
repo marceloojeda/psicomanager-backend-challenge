@@ -2,15 +2,11 @@
 
 namespace App\Application\Controllers;
 
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use App\Domain\Services\UserService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\Controller;
-
 
 class UserController extends Controller
 {

@@ -9,8 +9,7 @@ use App\Infrastructure\Persistence\Models\Task;
 class TaskRepository implements TaskRepositoryInterface {
 
     public function getTask(int $taskId): ?TaskEntity {
-        $task = Task::find($taskId);
-        if (!$task) return null;
+        $task = Task::findOrFail($taskId);
 
         return new TaskEntity(
             id: $task->id,

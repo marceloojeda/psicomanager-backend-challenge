@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Application\Requests\UserRequest;
-use App\Infrastructure\Persistence\Models\User;
 
 class UserService extends ServiceResponse {
     public function __construct(private UserRepositoryInterface $userRepository) {}

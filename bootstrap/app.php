@@ -96,6 +96,7 @@ $app->configure('app');
 // $app->register(App\Providers\EventServiceProvider::class);
 
 $app->bind(App\Domain\Interfaces\UserRepositoryInterface::class, App\Infrastructure\Persistence\Repositories\UserRepository::class);
+$app->bind(App\Domain\Interfaces\TaskRepositoryInterface::class, App\Infrastructure\Persistence\Repositories\TaskRepository::class);
 
 /*
 |--------------------------------------------------------------------------
