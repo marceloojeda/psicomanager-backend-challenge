@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Application\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class TaskResource extends JsonResource
+class UserResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,10 +16,10 @@ class TaskResource extends JsonResource
     {
         return [
             'id' => $this['id'],
-            'user_id' => $this['user_id'],
-            'description' => $this['description'],
-            'status' => $this['status'],
-            'created_at' => $this['created_at'],
+            'name' => $this['name'],
+            'email' => $this['email'],
+            'created_at' => $this['createdAt'],
+            //'tasks' => count($this['tasks'])
         ];
     }
 }

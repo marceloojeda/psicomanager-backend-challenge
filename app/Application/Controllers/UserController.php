@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Application\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use App\Services\UserService;
+use App\Domain\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
+use App\Http\Controllers\Controller;
 
 
 class UserController extends Controller
@@ -35,7 +36,7 @@ class UserController extends Controller
     function index(Request $request): JsonResponse
     {
         Cache::flush();
-        $this->userService->getFilteredUsers($request->all());
+        $this->userService->getFilteredUsersService($request->all());
         return $this->userService->getJsonResponse();
     }
 
@@ -47,7 +48,8 @@ class UserController extends Controller
      */
     function get(int $userId): JsonResponse
     {
-        $this->userService->getUser($userId);
+        Cache::flush();
+        $this->userService->getUserService($userId);
         return $this->userService->getJsonResponse();
     }
 
@@ -62,7 +64,7 @@ class UserController extends Controller
         $passed = $this->userService->validateUser($request);
 
         if ($passed === true)
-            $this->userService->createUser($request->all());
+            $this->userService->createUserService($request->all());
 
         return $this->userService->getJsonResponse();
     }
@@ -75,7 +77,7 @@ class UserController extends Controller
      */
     function delete(int $userId): JsonResponse
     {
-        $this->userService->deleteUser($userId);
+        $this->userService->deleteUserService($userId);
         return $this->userService->getJsonResponse();
     }
 }

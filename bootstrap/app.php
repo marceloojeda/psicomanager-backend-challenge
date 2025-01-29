@@ -95,6 +95,8 @@ $app->configure('app');
 // $app->register(App\Providers\AuthServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
 
+$app->bind(App\Domain\Interfaces\UserRepositoryInterface::class, App\Infrastructure\Persistence\Repositories\UserRepository::class);
+
 /*
 |--------------------------------------------------------------------------
 | Load The Application Routes
@@ -107,7 +109,7 @@ $app->configure('app');
 */
 
 $app->router->group([
-    'namespace' => 'App\Http\Controllers',
+    'namespace' => 'App\Application\Controllers',
 ], function ($router) {
     require __DIR__.'/../routes/web.php';
 });

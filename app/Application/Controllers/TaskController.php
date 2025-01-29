@@ -1,12 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Application\Controllers;
 
-use App\Models\Task;
 use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Controller;
 
 class TaskController extends Controller
 {
