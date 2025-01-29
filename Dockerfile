@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     libzip-dev zip unzip \
     && docker-php-ext-install pdo pdo_mysql
 
+RUN apt-get update && apt-get install -y netcat-openbsd
+
 RUN pecl install redis && docker-php-ext-enable redis
 
 RUN pecl install xdebug \
@@ -62,6 +64,9 @@ RUN chown -R www-data:www-data /var/www/html \
     && chown -R www-data:www-data /var/www/html/storage/logs \
     && chmod 777 -R /var/www/html
 
-ENTRYPOINT ["php-fpm"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 EXPOSE 9000

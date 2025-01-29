@@ -2,11 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Infrastructure\Persistence\Models\Log;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\SerializesModels;
+use App\Infrastructure\Persistence\Models\Log as LogEloquent;
+use Elastic\Elasticsearch\ClientBuilder;
+use Illuminate\Support\Facades\Log;
 
 class ProcessLogJob extends Job {
 
@@ -29,10 +27,41 @@ class ProcessLogJob extends Job {
      */
     public function handle()
     {
-        $log = new Log();
+        $log = new LogEloquent();
         $log->level = $this->record['level_name'];
         $log->message = $this->record['message'];
         $log->context = json_encode($this->record['context']);
-        $log->save();
+
+        $saveElasticSearch = empty(env('ELASTICSEARCH_HOST')) === false;
+
+        if ($saveElasticSearch === true) {
+            //$id = $this->record['context']['id'] ?? null;
+            $this->indexToElasticsearch($this->record['context']['operation']);
+        } else {
+            $log->save();
+        }
+    }
+
+    /**
+     * Indexar dados de logs no Elasticsearch.
+     */
+    private function indexToElasticsearch(array $log): void
+    {
+        try {
+            $client = ClientBuilder::create()->setHosts([env('ELASTICSEARCH_HOST')])->build();
+
+            $params = [
+                'index' => 'logs3',
+                'id'    => $log['id'],
+                'body'  => $log
+            ];
+
+            $client->index($params);
+
+            Log::info('Log salvo no elasticSearch !!!');
+
+        } catch (\Exception $e) {
+            Log::error('Erro Log no elasticSearch = ' . $e->getMessage());
+        }
     }
 }

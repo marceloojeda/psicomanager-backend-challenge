@@ -28,6 +28,8 @@ class LogQueueService
             'context' => $context
         ];
 
-        Queue::push(new ProcessLogJob($logData));
+        //Queue::push(new ProcessLogJob($logData));
+        $n = new ProcessLogJob($logData);
+        $n->handle();
     }
 }
