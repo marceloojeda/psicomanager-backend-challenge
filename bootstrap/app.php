@@ -97,6 +97,7 @@ $app->configure('app');
 
 $app->bind(App\Domain\Interfaces\UserRepositoryInterface::class, App\Infrastructure\Persistence\Repositories\UserRepository::class);
 $app->bind(App\Domain\Interfaces\TaskRepositoryInterface::class, App\Infrastructure\Persistence\Repositories\TaskRepository::class);
+$app->bind(App\Domain\Interfaces\LogRepositoryInterface::class, App\Infrastructure\Persistence\Repositories\LogRepository::class);
 
 $app->register(Illuminate\Redis\RedisServiceProvider::class);
 

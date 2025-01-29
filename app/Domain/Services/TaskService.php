@@ -33,6 +33,7 @@ class TaskService extends ServiceResponse {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao listar tarefas.Tente novamente mais tarde.');
             $this->setError($e->getMessage());
+            $this->saveLog($filters);
 
             return false;
         }
@@ -60,10 +61,12 @@ class TaskService extends ServiceResponse {
             $this->setStatus(Response::HTTP_NOT_FOUND);
             $this->setMessage('Tarefa não encontrada.');
             $this->setError($e->getMessage());
+            $this->saveLog($id);
         } catch (Exception $e) {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao encontrar tarefa. Tente novamente mais tarde.');
             $this->setError($e->getMessage());
+            $this->saveLog($id);
         }
 
         return false;

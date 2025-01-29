@@ -40,7 +40,7 @@ interface UserRepositoryInterface {
      * Exclui um usuário do sistema pelo seu ID.
      *
      * @param int $id O ID do usuário a ser excluído.
-     * @return bool Retorna true se o usuário foi excluído com sucesso, ou false se ocorreu um erro.
+     * @return UserEntity Retorna UserEntity.
      */
-    public function deleteUserRepository(int $id): bool;
+    public function deleteUserRepository(int $id): UserEntity;
 }

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Response;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\JsonResponse;
+use App\Infrastructure\Services\LogQueueService;
 
 class ServiceResponse
 {
@@ -153,7 +154,7 @@ class ServiceResponse
     public function setResource(string $resourceClass): void
     {
         if (is_subclass_of($resourceClass, JsonResource::class) === false) {
-            Log::error("O recurso deve ser uma instância de JsonResource.");
+            $this->setError("O recurso deve ser uma instância de JsonResource.");
         }
 
         $this->resourceClass = $resourceClass;
@@ -253,5 +254,27 @@ class ServiceResponse
     {
         $data = $this->getResponse();
         return response()->json($data, $data['status']);
+    }
+
+    /**
+     * Salva os logs.
+     *
+     * @param midex $request Algum request passado.
+     */
+    public function saveLog(mixed $request = ''): void {
+        try {
+            $level = LogQueueService::INFO;
+
+            if (empty($this->error) === false)
+                $level = LogQueueService::ERROR;
+
+            LogQueueService::save($level, $this->getMessage(), [
+                ///'user_id' => auth()->id(),
+                'request' => $request,
+                'operation' => $this->getData()
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+        }
     }
 }

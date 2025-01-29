@@ -95,6 +95,10 @@ class RedisCacheService
             $key .= "_{$identifier}";
         }
 
-        $this->set($key, $value, $ttl);
+        if ($ttl === 0) {
+            $this->set($key, $value);
+        } else {
+            $this->set($key, $value, $ttl);
+        }
     }
 }

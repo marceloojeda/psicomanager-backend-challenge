@@ -38,6 +38,7 @@ class UserService extends ServiceResponse {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao listar usuários.Tente novamente mais tarde.');
             $this->setError($e->getMessage());
+            $this->saveLog($filters);
 
             return false;
         }
@@ -65,10 +66,12 @@ class UserService extends ServiceResponse {
             $this->setStatus(Response::HTTP_NOT_FOUND);
             $this->setMessage('Usuário não encontrado.');
             $this->setError($e->getMessage());
+            $this->saveLog($id);
         } catch (Exception $e) {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao buscar usuário. Tente novamente mais tarde.');
             $this->setError($e->getMessage());
+            $this->saveLog($id);
         }
 
         return false;
@@ -99,6 +102,7 @@ class UserService extends ServiceResponse {
             $this->setMessage('Usuário cadastrado com sucesso!');
             $this->setCollectionItem($data);
             $this->setResource(UserResource::class);
+            $this->saveLog($data);
 
             DB::commit();
 
@@ -109,6 +113,7 @@ class UserService extends ServiceResponse {
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao cadastrar usuário. Tente novamente mais tarde.');
             $this->setError($e->getMessage());
+            $this->saveLog($data);
 
             return false;
         }
@@ -161,12 +166,15 @@ class UserService extends ServiceResponse {
         try {
             DB::beginTransaction();
 
-            $this->userRepository->deleteUserRepository($id);
+            $data = $this->userRepository->deleteUserRepository($id);
 
             $this->setStatus(Response::HTTP_OK);
             $this->setMessage('Usuário deletado com sucesso!');
+            $this->setData((array) $data);
 
             DB::commit();
+            $this->saveLog($id);
+
             return true;
 
         } catch (ModelNotFoundException $e) {
@@ -175,12 +183,14 @@ class UserService extends ServiceResponse {
             $this->setStatus(Response::HTTP_NOT_FOUND);
             $this->setMessage('Usuário não encontrado.');
             $this->setError($e->getMessage());
+            $this->saveLog($id);
         } catch (Exception $e) {
             DB::rollback();
 
             $this->setStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->setMessage('Erro ao excluir usuário. Tente novamente mais tarde.');
             $this->setError($e->getMessage());
+            $this->saveLog($id);
         }
 
         return false;

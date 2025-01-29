@@ -30,3 +30,5 @@ $router->group(['prefix' => 'users'], function () use ($router) {
     $router->post('/', 'UserController@store');
     $router->delete('/{userId}', 'UserController@delete');
 });
+
+$router->get('/logs', 'LogController@index');

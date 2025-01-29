@@ -81,13 +81,21 @@ class UserRepository implements UserRepositoryInterface {
      * Exclui um usuário do banco de dados.
      *
      * @param int $id O ID do usuário a ser excluído.
-     * @return bool Retorna true se o usuário foi excluído com sucesso.
+     * @return UserEntity Retorna UserEntity.
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Caso o usuário não seja encontrado.
      */
-    public function deleteUserRepository(int $id): bool {
+    public function deleteUserRepository(int $id): UserEntity {
         $user = User::where('id', $id)->firstOrFail();
+
+        $userEntity = new UserEntity(
+            id: $user->id,
+            name: $user->name,
+            email: $user->email,
+            createdAt: $user->createdAt
+        );
+
         $user->delete();
 
-        return true;
+        return $userEntity;
     }
 }
