@@ -17,3 +17,130 @@ A problemática e instruções de como resolve-los estão no arquivo *case_anali
 -  Resolva os problemas/tarefas descritos no arquivo *case_analitico_back.pdf*
 -  Crie sua branch e mande um *pull request* pra nós
 
+## Instalação
+
+#### instale a aplicação
+
+```
+docker-compose up -d
+```
+
+#### entre na aplicação laravel
+
+```
+docker exec -it php_container bash
+```
+
+#### instale as dependencias necessarias
+
+```
+composer install
+```
+
+#### por segurança, atualize as dependencias
+
+```
+composer update
+```
+
+#### crie o arquivo de configuração
+
+```
+cp .env.example .env
+```
+
+#### crie as tabelas do banco de dados
+
+```
+php artisan migrate
+```
+
+#### gere os dados para o banco de dados
+
+```
+php artisan db:seed
+```
+
+#### gera a chave da autenticação jwt
+
+```
+php artisan jwt:secret
+```
+
+#### adicione permissão
+
+```
+chmod 777 -R storage bootstrap
+```
+
+#### saia do container
+
+```
+exit
+```
+
+#### recrie o container
+
+```
+docker-compose up -d --force-recreate --build
+```
+
+### Exemplo de Uso
+
+#### crie um usuário pela api
+
+metodo: POST
+url:
+```
+http://localhost:8080/api/register
+```
+body:
+```
+{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password",
+    "password_confirmation": "password"
+}
+```
+
+a conta do usuário sera criada
+e um token de acesso sera gerado
+
+#### utilize o token para as proximas etapas
+
+#### listar usuários
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/users
+```
+
+#### pegar um usuário
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/users/ID
+```
+
+#### listar as tarefas
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/tasks?user_id=9
+```
+
+#### pegar uma tarefa
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/tasks/ID
+```
