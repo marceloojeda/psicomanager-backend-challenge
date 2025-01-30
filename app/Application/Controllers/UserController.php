@@ -44,7 +44,6 @@ class UserController extends Controller
      */
     function get(int $userId): JsonResponse
     {
-        Cache::flush();
         $this->userService->getUserService($userId);
         return $this->userService->getJsonResponse();
     }

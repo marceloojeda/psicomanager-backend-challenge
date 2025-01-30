@@ -60,6 +60,7 @@ $app->singleton(
 */
 
 $app->configure('app');
+$app->configure('jwt');
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +102,8 @@ $app->bind(App\Domain\Interfaces\LogRepositoryInterface::class, App\Infrastructu
 
 $app->register(Illuminate\Redis\RedisServiceProvider::class);
 
+$app->register(App\Providers\AuthServiceProvider::class);
+$app->register(Tymon\JWTAuth\Providers\LumenServiceProvider::class);
 
 /*
 |--------------------------------------------------------------------------
