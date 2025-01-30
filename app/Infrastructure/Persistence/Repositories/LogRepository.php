@@ -6,6 +6,7 @@ use App\Domain\Interfaces\LogRepositoryInterface;
 use App\Domain\Entities\LogEntity;
 use App\Infrastructure\Persistence\Models\Log;
 use App\Infrastructure\Cache\RedisCacheService;
+use App\Infrastructure\Services\ElasticsearchLogService;
 
 /**
  * Repositório para manipulação das tarefas.
@@ -28,7 +29,7 @@ class LogRepository implements LogRepositoryInterface {
     }
 
     /**
-     * Obtém uma lista paginada de logs, opcionalmente filtradas, com caching no Redis.
+     * Obtém os logs.
      *
      * @param array $params Parâmetros para busca e paginação.
      *
@@ -36,6 +37,56 @@ class LogRepository implements LogRepositoryInterface {
      */
     public function getFilteredLogs(array $params): array
     {
+        $saveElasticSearch = empty(env('ELASTICSEARCH_HOST')) === false;
+
+        if ($saveElasticSearch === true)
+            return $this->getLogsFromElasticSearch();
+
+        return $this->getLogsFromDB($params);
+    }
+
+    /**
+     * Normaliza os parâmetros de entrada, garantindo valores padrão.
+     *
+     * @param array $params Parâmetros recebidos para filtragem e paginação.
+     *
+     * @return array Parâmetros ajustados com valores padrão aplicados.
+     */
+    private function normalizeParams(array $params): array
+    {
+        return [
+            'user_id' => !empty($params['user_id']) ? $params['user_id'] : null,
+            'page' => !empty($params['page']) ? (int) $params['page'] : 1,
+            'perPage' => !empty($params['perPage']) ? (int) $params['perPage'] : 100,
+        ];
+    }
+
+    /**
+     * Obtém uma lista paginada de logs do ElasticSearch.
+     *
+     *
+     * @return array Lista de logs.
+     */
+    public function getLogsFromElasticSearch() {
+
+        $elas = new ElasticsearchLogService();
+        $logs = $elas->fetchAllLogs();
+
+        return $logs;
+    }
+
+
+    /**
+     * Obtém uma lista paginada de logs, opcionalmente filtradas, com caching no Redis.
+     *
+     * @param array $params Parâmetros para busca e paginação.
+     *
+     * @return array Lista de logs.
+     */
+    public function getLogsFromDB(array $params): array
+    {
+        return $this->getLogsFromElasticSearch();
+
         $params = $this->normalizeParams($params);
 
         $userId = $params['user_id'];
@@ -70,21 +121,5 @@ class LogRepository implements LogRepositoryInterface {
         $this->cacheService->setWithIdentifier($cacheKey, $taskEntities, 0, $userId);
 
         return $taskEntities;
-    }
-
-    /**
-     * Normaliza os parâmetros de entrada, garantindo valores padrão.
-     *
-     * @param array $params Parâmetros recebidos para filtragem e paginação.
-     *
-     * @return array Parâmetros ajustados com valores padrão aplicados.
-     */
-    private function normalizeParams(array $params): array
-    {
-        return [
-            'user_id' => !empty($params['user_id']) ? $params['user_id'] : null,
-            'page' => !empty($params['page']) ? (int) $params['page'] : 1,
-            'perPage' => !empty($params['perPage']) ? (int) $params['perPage'] : 100,
-        ];
     }
 }
