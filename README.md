@@ -61,22 +61,28 @@ php artisan migrate
 php artisan db:seed
 ```
 
+#### gera a chave da autenticação jwt
+
+```
+php artisan jwt:secret
+```
+
+#### adicione permissão
+
+```
+chmod 777 -R storage bootstrap
+```
+
 #### saia do container
 
 ```
 exit
 ```
 
-#### reinicie a aplicação
+#### recrie o container
 
 ```
-docker-compose restart
-```
-
-#### adicione permissão
-
-```
-sudo chmod 777 -R storage bootstrap
+docker-compose up -d --force-recreate --build
 ```
 
 ### Exemplo de Uso

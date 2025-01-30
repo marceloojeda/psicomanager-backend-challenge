@@ -26,7 +26,7 @@ class TasksTableSeeder extends Seeder
 
                 Task::factory()->count($user->id * 30)->create(['user_id' => $user->id]);
             }
-            
+
         }
     }
 }
