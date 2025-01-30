@@ -78,3 +78,63 @@ docker-compose restart
 ```
 sudo chmod 777 -R storage bootstrap
 ```
+
+### Exemplo de Uso
+
+#### crie um usuário pela api
+
+metodo: POST
+url:
+```
+http://localhost:8080/api/register
+```
+body:
+```
+{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password",
+    "password_confirmation": "password"
+}
+```
+
+a conta do usuário sera criada
+e um token de acesso sera gerado
+
+#### utilize o token para as proximas etapas
+
+#### listar usuários
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/users
+```
+
+#### pegar um usuário
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/users/ID
+```
+
+#### listar as tarefas
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/tasks?user_id=9
+```
+
+#### pegar uma tarefa
+
+metodo: GET
+authorization: BearerToken (use o token gerado)
+url:
+```
+http://localhost:8080/api/tasks/ID
+```
