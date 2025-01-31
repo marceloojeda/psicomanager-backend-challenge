@@ -29,3 +29,19 @@ A API apresenta os seguintes sintomas:
 
 9. Não há validação robusta nos endpoints, o que pode permitir dados inconsistentes no sistema.
 - Adicionado validação no metodo store em userController.
+
+### Autenticação
+
+1. Instalar pacote para autenticação
+```
+composer install
+```
+
+2. Gerar chave jwt
+```
+php artisan jwt:secret
+```
+
+3. Obter token de acesso ao realizar login na rota: /auth/login
+
+4. Passar o token como parametro: Authorization/Bearer
