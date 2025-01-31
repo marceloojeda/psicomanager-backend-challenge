@@ -20,16 +20,16 @@ use Illuminate\Support\Facades\Route;
 //     return $router->app->version();
 // });
 
-$router->group(['prefix' => 'tasks'], function () use ($router) {
+$router->post('/auth/login', 'AuthController@login');
 
+$router->group(['prefix' => 'tasks', 'middleware' => 'auth:api'], function () use ($router) {
     $router->get('/', 'TaskController@index');
+    $router->get('/{taskId}', 'TaskController@get');
 });
 
-$router->group(['prefix' => 'users'], function () use ($router) {
-
+$router->group(['prefix' => 'users', 'middleware' => 'auth:api'], function () use ($router) {
     $router->get('/', 'UserController@index');
     $router->get('/{userId}', 'UserController@get');
-    $router->post('/', 'UserController@store');
     $router->post('/', 'UserController@store');
     $router->delete('/{userId}', 'UserController@delete');
 });
