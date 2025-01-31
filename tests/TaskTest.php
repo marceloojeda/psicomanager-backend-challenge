@@ -12,16 +12,17 @@ class TaskTest extends TestCase
 
         Task::factory()->count(1200)->create(['user_id' => $user->id]);
 
-        $this->get('/tasks')
-         ->seeStatusCode(200)
-         ->seeJsonStructure([
-             '*' => [
-                 'id',
-                 'user_id',
-                 'description',
-                 'status'
-             ]
-         ]);
+        $this->actingAs($user, 'api')
+            ->get('/tasks')
+            ->seeStatusCode(200)
+            ->seeJsonStructure([
+                '*' => [
+                    'id',
+                    'user_id',
+                    'description',
+                    'status'
+                ]
+            ]);
     }
 
     public function test_get_task_by_user()
@@ -30,29 +31,32 @@ class TaskTest extends TestCase
 
         Task::factory()->count(10)->create(['user_id' => $user->id]);
 
-        $this->get('/tasks?user_id=' . $user->id)
-         ->seeStatusCode(200)
-         ->seeJsonStructure([
-             '*' => [
-                 'id',
-                 'user_id',
-                 'description',
-                 'status'
-             ]
-         ]);
+        $this->actingAs($user, 'api')
+            ->get('/tasks?user_id=' . $user->id)
+            ->seeStatusCode(200)
+            ->seeJsonStructure([
+                '*' => [
+                    'id',
+                    'user_id',
+                    'description',
+                    'status'
+                ]
+            ]);
     }
 
     public function test_get_task_by_id()
     {
+        $user = User::factory()->create();
         $task = Task::factory()->create();
 
-        $this->get("tasks/{$task->id}")
-         ->seeStatusCode(200)
-         ->seeJsonStructure([
-             'id',
-             'user_id',
-             'description',
-             'status'
-         ]);
+        $this->actingAs($user, 'api')
+            ->get("tasks/{$task->id}")
+            ->seeStatusCode(200)
+            ->seeJsonStructure([
+                'id',
+                'user_id',
+                'description',
+                'status'
+            ]);
     }
 }
