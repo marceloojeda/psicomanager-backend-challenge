@@ -33,6 +33,11 @@ class UserRepository implements IUserRepository
         return $users->get();
     }
 
+    public function findUserIsAdmin()
+    {
+        return User::where('is_admin', true)->first();
+    }
+
     public function persist($request)
     {
         $user = User::create([

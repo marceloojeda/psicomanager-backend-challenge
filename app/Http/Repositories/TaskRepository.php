@@ -27,6 +27,11 @@ class TaskRepository implements ITaskRepository
         return Task::create($request->all());
     }
 
+    public function transferTasks($userId, $adminId)
+    {
+        Task::where('user_id', $userId)->update(['user_id' => $adminId]);
+    }
+
     public function delete($taskId)
     {
         $task = Task::where('id', $taskId)->firstOrFail();
