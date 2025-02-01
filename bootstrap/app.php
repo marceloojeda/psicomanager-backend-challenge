@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Repositories\Interfaces\ITaskRepository;
+use App\Http\Repositories\Interfaces\IUserRepository;
+use App\Http\Repositories\TaskRepository;
+use App\Http\Repositories\UserRepository;
+
 require_once __DIR__.'/../vendor/autoload.php';
 
 (new Laravel\Lumen\Bootstrap\LoadEnvironmentVariables(
@@ -105,6 +110,9 @@ $app->configure('app');
 | can respond to, as well as the controllers that may handle them.
 |
 */
+
+$app->bind(IUserRepository::class, UserRepository::class);
+$app->bind(ITaskRepository::class, TaskRepository::class);
 
 $app->router->group([
     'namespace' => 'App\Http\Controllers',

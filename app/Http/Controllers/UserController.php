@@ -2,32 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
+    private UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     function index()
     {
-        $users = User::all();
-
-        return response()->json($users);
+        return response()->json($this->userService->getUsers());
     }
     
     function store(Request $request)
     {
-        $user = User::create($request->all());
-
-        return response()->json($user);
+        return response()->json($this->userService->store($request));
     }
 
     function delete($userId)
     {
-        $user = User::where('id', $userId)->firstOrFail();
-
-        $user->delete();
-
+        $this->userService->delete($userId);
         return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
     }
 }
