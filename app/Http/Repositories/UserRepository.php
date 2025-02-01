@@ -4,6 +4,7 @@ namespace App\Http\Repositories;
 
 use App\Http\Repositories\Interfaces\IUserRepository;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class UserRepository implements IUserRepository
 {
@@ -34,7 +35,13 @@ class UserRepository implements IUserRepository
 
     public function persist($request)
     {
-        return User::create($request->all());
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password)
+        ]);
+
+        return $user;
     }
 
     public function delete($userId)
