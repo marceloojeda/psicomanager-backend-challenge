@@ -3,6 +3,7 @@
 namespace App\Http\Services;
 
 use App\Http\Repositories\Interfaces\IUserRepository;
+use App\Http\Validators\CreateUserValidator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -31,6 +32,7 @@ class UserService
 
     public function store(Request $request)
     {
+        CreateUserValidator::validate($request);
         return response()->json($this->userRepository->persist($request));
     }
 
