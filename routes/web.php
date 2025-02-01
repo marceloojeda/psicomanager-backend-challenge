@@ -29,6 +29,5 @@ $router->group(['prefix' => 'users'], function () use ($router) {
     $router->get('/', 'UserController@index');
     $router->get('/{userId}', 'UserController@get');
     $router->post('/', 'UserController@store');
-    $router->post('/', 'UserController@store');
     $router->delete('/{userId}', 'UserController@delete');
 });

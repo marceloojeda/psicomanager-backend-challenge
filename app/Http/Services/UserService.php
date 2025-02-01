@@ -12,11 +12,17 @@ class UserService
 {
     private IUserRepository $userRepository;
     private ITaskRepository $taskRepository;
+    private LogService $logService;
 
-    public function __construct(IUserRepository $userRepository, ITaskRepository $taskRepository)
+    public function __construct(
+        IUserRepository $userRepository, 
+        ITaskRepository $taskRepository,
+        LogService $logService
+    )
     {
         $this->userRepository = $userRepository;
         $this->taskRepository = $taskRepository;
+        $this->logService = $logService;
     }
 
     public function getUsers(Request $request)
@@ -36,7 +42,15 @@ class UserService
     public function store(Request $request)
     {
         CreateUserValidator::validate($request);
-        return response()->json($this->userRepository->persist($request));
+        $user = $this->userRepository->persist($request);
+
+        $this->logService->logInfo('Usuário criado com sucesso', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'email' => $user->email,
+        ]);
+
+        return response()->json($user, Response::HTTP_CREATED);
     }
 
     public function delete($userId)
@@ -53,7 +67,19 @@ class UserService
             return response()->json(['error' => 'Nenhum usuário administrador encontrado para transferir as tarefas.'], 400);
         }
 
-        $this->taskRepository->transferTasks($userId, $admin->id);
+        $transferredTasks = $this->taskRepository->transferTasks($userId, $admin->id);
+
+        $this->logService->logInfo('Tarefas transferidas com sucesso', [
+            'user_id' => $userId,
+            'admin_id' => $admin->id,
+            'transferred_tasks' => $transferredTasks,
+        ]);
+
+        $this->logService->logWarning('Usuário excluído com sucesso', [
+            'user_id' => $userId,
+            'user_name' => $user->name,
+        ]);
+
         $this->userRepository->delete($userId);
         return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
     }

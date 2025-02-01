@@ -15,7 +15,7 @@ class UserRepository implements IUserRepository
 
     public function findById($userId)
     {
-        return User::where('id', $userId)->get();
+        return User::where('id', $userId)->firstOrFail();
     }
 
     public function findByFilter($request)
