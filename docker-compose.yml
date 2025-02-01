@@ -25,11 +25,6 @@ services:
       - mysql
     networks:
       - app-network
-    command: >
-      sh -c "
-      php artisan migrate --force &&
-      php-fpm
-      "
 
   mysql:
     image: mysql:8.0
