@@ -19,6 +19,11 @@ class UserController extends Controller
     {
         return response()->json($this->userService->getUsers($request));
     }
+
+    function get($userId)
+    {
+        return response()->json($this->userService->getUserById($userId));
+    }
     
     function store(Request $request)
     {

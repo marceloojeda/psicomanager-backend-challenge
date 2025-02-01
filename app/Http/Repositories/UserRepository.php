@@ -12,6 +12,11 @@ class UserRepository implements IUserRepository
         return User::all();
     }
 
+    public function findById($userId)
+    {
+        return User::where('id', $userId)->get();
+    }
+
     public function findByFilter($request)
     {
         $users = User::query();

@@ -17,12 +17,16 @@ class UserService
 
     public function getUsers(Request $request)
     {
-        
         if ($request->has('name') || $request->has('id')) {
             return $this->userRepository->findByFilter($request);
         }
 
         return response()->json($this->userRepository->findAll());
+    }
+
+    public function getUserById($userId)
+    {
+        return response()->json($this->userRepository->findById($userId));
     }
 
     public function store(Request $request)
