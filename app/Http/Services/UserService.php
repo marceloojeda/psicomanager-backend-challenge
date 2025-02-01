@@ -15,8 +15,13 @@ class UserService
         $this->userRepository = $userRepository;
     }
 
-    public function getUsers()
+    public function getUsers(Request $request)
     {
+        
+        if ($request->has('name') || $request->has('id')) {
+            return $this->userRepository->findByFilter($request);
+        }
+
         return response()->json($this->userRepository->findAll());
     }
 

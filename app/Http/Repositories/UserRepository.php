@@ -12,6 +12,21 @@ class UserRepository implements IUserRepository
         return User::all();
     }
 
+    public function findByFilter($request)
+    {
+        $users = User::query();
+
+        if ($request->has('name')) {
+            $users->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        if ($request->has('id')) {
+            $users->where('id', $request->id);
+        }
+
+        return $users->get();
+    }
+
     public function persist($request)
     {
         return User::create($request->all());
