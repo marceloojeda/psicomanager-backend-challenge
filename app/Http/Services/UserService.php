@@ -2,12 +2,16 @@
 
 namespace App\Http\Services;
 
+use App\Exceptions\ApiException;
 use App\Http\Repositories\Interfaces\ITaskRepository;
 use App\Http\Repositories\Interfaces\IUserRepository;
 use App\Http\Validators\CreateUserValidator;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class UserService
 {
@@ -28,47 +32,69 @@ class UserService
 
     public function getUsers(Request $request): JsonResponse
     {
-        if ($request->has('name') || $request->has('id')) {
-            return $this->userRepository->findByFilter($request);
+        $users = $request->has('name') || $request->has('id') 
+        ? $this->userRepository->findByFilter($request) 
+        : $this->userRepository->findAll();
+
+        if ($users->isEmpty()) {
+            throw new ApiException('Nenhum usuário encontrado', 404);
         }
 
-        return response()->json($this->userRepository->findAll());
+        return response()->json($users);
     }
 
-    public function getUserById($userId): JsonResponse
-    {
-        return response()->json($this->userRepository->findById($userId));
-    }
-
-    public function store(Request $request): JsonResponse
-    {
-        CreateUserValidator::validate($request);
-        $user = $this->userRepository->persist($request);
-
-        $this->logService->logInfo('Usuário criado com sucesso', [
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'email' => $user->email,
-        ]);
-
-        return response()->json($user, Response::HTTP_CREATED);
-    }
-
-    public function delete($userId): string|JsonResponse
+    public function getUserById(int $userId): JsonResponse
     {
         $user = $this->userRepository->findById($userId);
 
         if (!$user) {
-            return response()->json(['error' => 'Usuário não encontrado'], 404);
+            throw new ApiException('Usuário não encontrado', 404);
+        }
+
+        return response()->json($user);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        try {
+            CreateUserValidator::validate($request);
+            $user = $this->userRepository->persist($request);
+
+            $this->logService->logInfo('Usuário criado com sucesso', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'email' => $user->email,
+            ]);
+
+            return response()->json($user, Response::HTTP_CREATED);
+        } catch (ValidationException $e) {
+            throw new ApiException('Erro de validação', Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (QueryException $e) {
+            throw new ApiException('Erro ao criar usuário', Response::HTTP_INTERNAL_SERVER_ERROR);
+        } catch (Throwable $e) {
+            throw new ApiException('Erro interno', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function delete(int $userId): string|JsonResponse
+    {
+        $user = $this->userRepository->findById($userId);
+
+        if (!$user) {
+            throw new ApiException('Usuário não encontrado', 404);
         }
 
         $admin = $this->userRepository->findUserIsAdmin();
 
         if (!$admin) {
-            return response()->json(['error' => 'Nenhum usuário administrador encontrado para transferir as tarefas.'], 400);
+            throw new ApiException('Nenhum administrador encontrado', 404);
         }
 
         $transferredTasks = $this->taskRepository->transferTasks($userId, $admin->id);
+
+        if ($transferredTasks === 0) {
+            throw new ApiException('Erro ao transferir tarefas', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
 
         $this->logService->logInfo('Tarefas transferidas com sucesso', [
             'user_id' => $userId,
