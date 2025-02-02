@@ -4,21 +4,22 @@ namespace App\Http\Repositories;
 
 use App\Http\Repositories\Interfaces\IUserRepository;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Hash;
 
 class UserRepository implements IUserRepository
 {
-    public function findAll()
+    public function findAll(): Collection
     {
         return User::all();
     }
 
-    public function findById($userId)
+    public function findById($userId): User
     {
         return User::where('id', $userId)->firstOrFail();
     }
 
-    public function findByFilter($request)
+    public function findByFilter($request): Collection
     {
         $users = User::query();
 
@@ -33,12 +34,12 @@ class UserRepository implements IUserRepository
         return $users->get();
     }
 
-    public function findUserIsAdmin()
+    public function findUserIsAdmin(): User
     {
         return User::where('is_admin', true)->first();
     }
 
-    public function persist($request)
+    public function persist($request): User
     {
         $user = User::create([
             'name' => $request->name,
@@ -49,7 +50,7 @@ class UserRepository implements IUserRepository
         return $user;
     }
 
-    public function delete($userId)
+    public function delete($userId): void
     {
         $user = User::where('id', $userId)->firstOrFail();
         $user->delete();

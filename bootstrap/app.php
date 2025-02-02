@@ -4,6 +4,7 @@ use App\Http\Repositories\Interfaces\ITaskRepository;
 use App\Http\Repositories\Interfaces\IUserRepository;
 use App\Http\Repositories\TaskRepository;
 use App\Http\Repositories\UserRepository;
+use Illuminate\Redis\RedisServiceProvider;
 
 require_once __DIR__.'/../vendor/autoload.php';
 
@@ -65,6 +66,9 @@ $app->singleton(
 */
 
 $app->configure('app');
+
+$app->configure('cache');
+$app->register(RedisServiceProvider::class);
 
 /*
 |--------------------------------------------------------------------------

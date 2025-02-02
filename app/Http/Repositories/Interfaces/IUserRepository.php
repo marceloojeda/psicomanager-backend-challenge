@@ -2,12 +2,16 @@
 
 namespace App\Http\Repositories\Interfaces;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Request;
+
 interface IUserRepository
 {
-    public function findAll();
-    public function findById($userId);
-    public function findByFilter($request);
-    public function findUserIsAdmin();
-    public function persist($request);
-    public function delete($userId);
+    public function findAll(): Collection;
+    public function findById(int $userId): User;
+    public function findByFilter(Request $request): Collection;
+    public function findUserIsAdmin(): User;
+    public function persist(Request $request): User;
+    public function delete(int $userId): void;
 }

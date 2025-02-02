@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Services\UserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
@@ -15,24 +15,23 @@ class UserController extends Controller
         $this->userService = $userService;
     }
 
-    function index(Request $request)
+    function index(Request $request): JsonResponse
     {
         return response()->json($this->userService->getUsers($request));
     }
 
-    function get($userId)
+    function get($userId): JsonResponse
     {
         return response()->json($this->userService->getUserById($userId));
     }
     
-    function store(Request $request)
+    function store(Request $request): JsonResponse
     {
         return response()->json($this->userService->store($request));
     }
 
-    function delete($userId)
+    function delete($userId): string|JsonResponse
     {
-        $this->userService->delete($userId);
-        return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
+        return $this->userService->delete($userId);
     }
 }

@@ -3,7 +3,9 @@
 namespace App\Http\Services;
 
 use App\Http\Repositories\Interfaces\ITaskRepository;
+use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class TaskService
 {
@@ -15,24 +17,12 @@ class TaskService
         $this->taskRepository = $taskRepository;
     }
 
-    public function findAll(Request $request)
+    public function findAll(Request $request): LengthAwarePaginator
     {
-        if (!empty($request->input('user_id'))) {
-            $results = $this->taskRepository->findByUser($request->input('user_id'));
-        } else {
-            $results = $this->taskRepository->findAll();
-
-        }
-
-        $retorno = [];
-        foreach ($results as $task) {
-            $retorno[] = $task->toArray();
-        }
-        
-        return $retorno;
+        return $this->taskRepository->findAll($request);
     }
 
-    public function findById($taskId)
+    public function findById(int $taskId): Task
     {
         return $this->taskRepository->findById($taskId);
     }

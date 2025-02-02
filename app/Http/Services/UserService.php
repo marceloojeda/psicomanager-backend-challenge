@@ -5,6 +5,7 @@ namespace App\Http\Services;
 use App\Http\Repositories\Interfaces\ITaskRepository;
 use App\Http\Repositories\Interfaces\IUserRepository;
 use App\Http\Validators\CreateUserValidator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -25,7 +26,7 @@ class UserService
         $this->logService = $logService;
     }
 
-    public function getUsers(Request $request)
+    public function getUsers(Request $request): JsonResponse
     {
         if ($request->has('name') || $request->has('id')) {
             return $this->userRepository->findByFilter($request);
@@ -34,12 +35,12 @@ class UserService
         return response()->json($this->userRepository->findAll());
     }
 
-    public function getUserById($userId)
+    public function getUserById($userId): JsonResponse
     {
         return response()->json($this->userRepository->findById($userId));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         CreateUserValidator::validate($request);
         $user = $this->userRepository->persist($request);
@@ -53,7 +54,7 @@ class UserService
         return response()->json($user, Response::HTTP_CREATED);
     }
 
-    public function delete($userId)
+    public function delete($userId): string|JsonResponse
     {
         $user = $this->userRepository->findById($userId);
 
