@@ -66,7 +66,7 @@ $app->singleton(
 */
 
 $app->configure('app');
-
+$app->configure('jwt');
 $app->configure('cache');
 $app->register(RedisServiceProvider::class);
 
@@ -89,6 +89,10 @@ $app->register(RedisServiceProvider::class);
 //     'auth' => App\Http\Middleware\Authenticate::class,
 // ]);
 
+$app->routeMiddleware([
+    'jwt.auth' => App\Http\Middleware\JwtMiddleware::class,
+]);
+
 /*
 |--------------------------------------------------------------------------
 | Register Service Providers
@@ -101,7 +105,9 @@ $app->register(RedisServiceProvider::class);
 */
 
 // $app->register(App\Providers\AppServiceProvider::class);
-// $app->register(App\Providers\AuthServiceProvider::class);
+$app->register(App\Providers\AuthServiceProvider::class);
+$app->register(Tymon\JWTAuth\Providers\LumenServiceProvider::class);
+class_alias(Tymon\JWTAuth\Facades\JWTAuth::class, 'JWTAuth');
 // $app->register(App\Providers\EventServiceProvider::class);
 
 /*

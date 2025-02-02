@@ -17,14 +17,20 @@
 //     return $router->app->version();
 // });
 
-$router->group(['prefix' => 'tasks'], function () use ($router) {
-    $router->get('/', 'TaskController@index');
-    $router->get('/{taskId}', 'TaskController@getById');
-});
+$router->post('login', 'AuthController@login');
 
-$router->group(['prefix' => 'users'], function () use ($router) {
-    $router->get('/', 'UserController@index');
-    $router->get('/{userId}', 'UserController@get');
-    $router->post('/', 'UserController@store');
-    $router->delete('/{userId}', 'UserController@delete');
+$router->group(['middleware' => 'jwt.auth'], function ($router) {
+    $router->post('logout', 'AuthController@logout');
+
+    $router->group(['prefix' => 'tasks'], function () use ($router) {
+        $router->get('/', 'TaskController@index');
+        $router->get('/{taskId}', 'TaskController@getById');
+    });
+    
+    $router->group(['prefix' => 'users'], function () use ($router) {
+        $router->get('/', 'UserController@index');
+        $router->get('/{userId}', 'UserController@get');
+        $router->post('/', 'UserController@store');
+        $router->delete('/{userId}', 'UserController@delete');
+    });
 });
