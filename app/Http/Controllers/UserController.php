@@ -17,21 +17,21 @@ class UserController extends Controller
 
     function index(Request $request): JsonResponse
     {
-        return response()->json($this->userService->getUsers($request));
+        return response()->json(['status' => 'success', 'data' => $this->userService->getUsers($request)], 200);
     }
 
     function get($userId): JsonResponse
     {
-        return response()->json($this->userService->getUserById($userId));
+        return response()->json(['status' => 'success', 'data' => $this->userService->getUserById($userId)], 200);
     }
     
     function store(Request $request): JsonResponse
     {
-        return response()->json($this->userService->store($request));
+        return response()->json(['status' => 'success', 'data' => $this->userService->store($request)], 200);
     }
 
     function delete($userId): string|JsonResponse
     {
-        return $this->userService->delete($userId);
+        return  response()->json(['status' => 'success', 'message' => 'Usuário excluído com sucesso'], 200);
     }
 }

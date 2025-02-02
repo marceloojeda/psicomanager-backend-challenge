@@ -18,11 +18,11 @@ class TaskController extends Controller
 
     function index(Request $request): JsonResponse
     {
-        return response()->json($this->taskService->findAll($request));
+        return response()->json(['status' => 'success', 'data' => $this->taskService->findAll($request)], 200);
     }
 
     function getById($taskId): JsonResponse
     {
-        return response()->json($this->taskService->findById($taskId));
+        return response()->json(['status' => 'success', 'data' => $this->taskService->findById($taskId)], 200);
     }
 }

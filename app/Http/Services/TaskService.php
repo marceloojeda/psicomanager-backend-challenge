@@ -4,10 +4,10 @@ namespace App\Http\Services;
 
 use App\Exceptions\ApiException;
 use App\Http\Repositories\Interfaces\ITaskRepository;
-use App\Models\Task;
+use App\Http\Resources\TaskResource;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Throwable;
 
 class TaskService
@@ -20,10 +20,12 @@ class TaskService
         $this->taskRepository = $taskRepository;
     }
 
-    public function findAll(Request $request): LengthAwarePaginator
+    public function findAll(Request $request): AnonymousResourceCollection
     {
         try {
-            return $this->taskRepository->findAll($request);
+            $tasks = $this->taskRepository->findAll($request);
+
+            return TaskResource::collection($tasks);
         } catch (QueryException $e) {
             throw new ApiException('Erro ao buscar tarefas', 500);
         } catch (Throwable $e) {
@@ -31,7 +33,7 @@ class TaskService
         }
     }
 
-    public function findById(int $taskId): Task
+    public function findById(int $taskId): TaskResource
     {
         try {
             $task = $this->taskRepository->findById($taskId);
@@ -40,7 +42,7 @@ class TaskService
                 throw new ApiException('Tarefa não encontrada', 404);
             }
 
-            return $task;
+            return new TaskResource($task);
         } catch (QueryException $e) {
             throw new ApiException('Erro ao buscar tarefa', 500);
         } catch (Throwable $e) {

@@ -5,10 +5,12 @@ namespace App\Http\Services;
 use App\Exceptions\ApiException;
 use App\Http\Repositories\Interfaces\ITaskRepository;
 use App\Http\Repositories\Interfaces\IUserRepository;
+use App\Http\Resources\UserResource;
 use App\Http\Validators\CreateUserValidator;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -30,7 +32,7 @@ class UserService
         $this->logService = $logService;
     }
 
-    public function getUsers(Request $request): JsonResponse
+    public function getUsers(Request $request): AnonymousResourceCollection
     {
         $users = $request->has('name') || $request->has('id') 
         ? $this->userRepository->findByFilter($request) 
@@ -40,10 +42,10 @@ class UserService
             throw new ApiException('Nenhum usuário encontrado', 404);
         }
 
-        return response()->json($users);
+        return UserResource::collection($users);
     }
 
-    public function getUserById(int $userId): JsonResponse
+    public function getUserById(int $userId): UserResource
     {
         $user = $this->userRepository->findById($userId);
 
@@ -51,10 +53,10 @@ class UserService
             throw new ApiException('Usuário não encontrado', 404);
         }
 
-        return response()->json($user);
+        return new UserResource($user);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): UserResource
     {
         try {
             CreateUserValidator::validate($request);
@@ -66,7 +68,7 @@ class UserService
                 'email' => $user->email,
             ]);
 
-            return response()->json($user, Response::HTTP_CREATED);
+            return new UserResource($user);
         } catch (ValidationException $e) {
             throw new ApiException('Erro de validação', Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (QueryException $e) {
@@ -76,7 +78,7 @@ class UserService
         }
     }
 
-    public function delete(int $userId): string|JsonResponse
+    public function delete(int $userId): void
     {
         $user = $this->userRepository->findById($userId);
 
@@ -101,13 +103,12 @@ class UserService
             'admin_id' => $admin->id,
             'transferred_tasks' => $transferredTasks,
         ]);
+        
+        $this->userRepository->delete($userId);
 
         $this->logService->logWarning('Usuário excluído com sucesso', [
             'user_id' => $userId,
             'user_name' => $user->name,
         ]);
-
-        $this->userRepository->delete($userId);
-        return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
     }
 }
