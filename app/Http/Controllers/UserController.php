@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Services\UserService;
+use App\Http\Validators\CreateUserValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,7 @@ class UserController extends Controller
     
     function store(Request $request): JsonResponse
     {
+        CreateUserValidator::validate($request);
         return response()->json(['status' => 'success', 'data' => $this->userService->store($request)], 200);
     }
 

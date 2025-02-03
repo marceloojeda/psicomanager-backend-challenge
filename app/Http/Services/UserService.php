@@ -6,9 +6,7 @@ use App\Exceptions\ApiException;
 use App\Http\Repositories\Interfaces\ITaskRepository;
 use App\Http\Repositories\Interfaces\IUserRepository;
 use App\Http\Resources\UserResource;
-use App\Http\Validators\CreateUserValidator;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -59,7 +57,6 @@ class UserService
     public function store(Request $request): UserResource
     {
         try {
-            CreateUserValidator::validate($request);
             $user = $this->userRepository->persist($request);
 
             $this->logService->logInfo('Usuário criado com sucesso', [
@@ -74,7 +71,7 @@ class UserService
         } catch (QueryException $e) {
             throw new ApiException('Erro ao criar usuário', Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (Throwable $e) {
-            throw new ApiException('Erro interno', Response::HTTP_INTERNAL_SERVER_ERROR);
+            throw new ApiException($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

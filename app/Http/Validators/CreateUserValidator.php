@@ -2,6 +2,7 @@
 
 namespace App\Http\Validators;
 
+use App\Exceptions\ApiException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -24,9 +25,10 @@ class CreateUserValidator
             'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
         ]);
 
+        dd($request->all());
+
         if ($validator->fails()) {
-            response()->json(['errors' => $validator->errors()], 422)->send();
-            exit;
+            throw new ApiException('Erro de validação', 422, $validator->errors());
         }
     }
 }
