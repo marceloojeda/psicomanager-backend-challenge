@@ -2,32 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Services\UserService;
+use App\Http\Validators\CreateUserValidator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
-    function index()
-    {
-        $users = User::all();
+    private UserService $userService;
 
-        return response()->json($users);
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+    function index(Request $request): JsonResponse
+    {
+        return response()->json(['status' => 'success', 'data' => $this->userService->getUsers($request)], 200);
+    }
+
+    function get($userId): JsonResponse
+    {
+        return response()->json(['status' => 'success', 'data' => $this->userService->getUserById($userId)], 200);
     }
     
-    function store(Request $request)
+    function store(Request $request): JsonResponse
     {
-        $user = User::create($request->all());
-
-        return response()->json($user);
+        CreateUserValidator::validate($request);
+        return response()->json(['status' => 'success', 'data' => $this->userService->store($request)], 200);
     }
 
-    function delete($userId)
+    function delete($userId): string|JsonResponse
     {
-        $user = User::where('id', $userId)->firstOrFail();
-
-        $user->delete();
-
-        return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
+        return  response()->json(['status' => 'success', 'message' => 'Usuário excluído com sucesso'], 200);
     }
 }

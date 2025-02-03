@@ -2,42 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Task;
+use App\Http\Services\TaskService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    
+    private TaskService $taskService;
+
+    public function __construct(TaskService $taskService)
     {
+        $this->taskService = $taskService;
     }
 
-    function index(Request $request)
+    function index(Request $request): JsonResponse
     {
-        if (!empty($request->input('user_id'))) {
-
-            $results = Task::where(['user_id' => $request->input('user_id')])->get();
-        } else {
-
-            $results = Task::all();
-        }
-
-        $retorno = [];
-        foreach ($results as $task) {
-
-            $retorno[] = $task->toArray();
-        }
-
-        return response()->json($retorno);
+        return response()->json(['status' => 'success', 'data' => $this->taskService->findAll($request)], 200);
     }
 
-    function get($taskId)
+    function getById($taskId): JsonResponse
     {
-        $task = Task::where('id', $taskId)->firstOrFail();
-        return response()->json($task);
+        return response()->json(['status' => 'success', 'data' => $this->taskService->findById($taskId)], 200);
     }
 }

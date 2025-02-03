@@ -25,11 +25,6 @@ services:
       - mysql
     networks:
       - app-network
-    command: >
-      sh -c "
-      php artisan migrate --force &&
-      php-fpm
-      "
 
   mysql:
     image: mysql:8.0
@@ -44,6 +39,19 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:alpine
+    container_name: redis_container
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    volumes:
+      - redis_data:/data
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  redis_data:

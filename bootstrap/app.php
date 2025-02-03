@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Repositories\Interfaces\ITaskRepository;
+use App\Http\Repositories\Interfaces\IUserRepository;
+use App\Http\Repositories\TaskRepository;
+use App\Http\Repositories\UserRepository;
+use Illuminate\Redis\RedisServiceProvider;
+
 require_once __DIR__.'/../vendor/autoload.php';
 
 (new Laravel\Lumen\Bootstrap\LoadEnvironmentVariables(
@@ -60,6 +66,9 @@ $app->singleton(
 */
 
 $app->configure('app');
+$app->configure('jwt');
+$app->configure('cache');
+$app->register(RedisServiceProvider::class);
 
 /*
 |--------------------------------------------------------------------------
@@ -80,6 +89,10 @@ $app->configure('app');
 //     'auth' => App\Http\Middleware\Authenticate::class,
 // ]);
 
+$app->routeMiddleware([
+    'jwt.auth' => App\Http\Middleware\JwtMiddleware::class,
+]);
+
 /*
 |--------------------------------------------------------------------------
 | Register Service Providers
@@ -92,7 +105,9 @@ $app->configure('app');
 */
 
 // $app->register(App\Providers\AppServiceProvider::class);
-// $app->register(App\Providers\AuthServiceProvider::class);
+$app->register(App\Providers\AuthServiceProvider::class);
+$app->register(Tymon\JWTAuth\Providers\LumenServiceProvider::class);
+class_alias(Tymon\JWTAuth\Facades\JWTAuth::class, 'JWTAuth');
 // $app->register(App\Providers\EventServiceProvider::class);
 
 /*
@@ -105,6 +120,9 @@ $app->configure('app');
 | can respond to, as well as the controllers that may handle them.
 |
 */
+
+$app->bind(IUserRepository::class, UserRepository::class);
+$app->bind(ITaskRepository::class, TaskRepository::class);
 
 $app->router->group([
     'namespace' => 'App\Http\Controllers',

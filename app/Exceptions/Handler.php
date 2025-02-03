@@ -49,6 +49,22 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
-        return parent::render($request, $exception);
+        if ($exception instanceof ApiException) {
+            return $exception->render();
+        }
+
+        if ($exception instanceof \Illuminate\Validation\ValidationException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro de validação',
+                'errors'  => $exception->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Ocorreu um erro inesperado.',
+            'error'   => config('app.debug') ? $exception->getMessage() : 'Erro interno do servidor',
+        ], 500);
     }
 }
