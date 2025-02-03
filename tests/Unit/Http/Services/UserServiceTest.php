@@ -103,6 +103,7 @@ class UserServiceTest extends TestCase
         $john = ['name' => 'John Doe', 'email' => '5H5hK@example.com'];
 
         $userJohn = new User($john);
+        $userJohn->id = 1;
 
         $request = Request::create('/users', 'GET', ['id' => 1]);
 
