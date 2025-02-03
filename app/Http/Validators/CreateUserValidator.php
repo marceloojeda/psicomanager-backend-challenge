@@ -25,8 +25,6 @@ class CreateUserValidator
             'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
         ]);
 
-        dd($request->all());
-
         if ($validator->fails()) {
             throw new ApiException('Erro de validação', 422, $validator->errors());
         }
