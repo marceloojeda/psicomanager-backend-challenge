@@ -5,7 +5,7 @@
 ## História
 
 Um produto do HUB de soluções da Psico Gestor deseja disponibilizar um gerenciador de tarefas para seus usuários. Para evitar ajustes e adequações complexas nas APIs já existentes, foi decidido que esse recurso será suportado por uma API exclusiva executando como um micro-serviço.
-A problemática e instruções de como resolve-los estão no arquivo *case_analitico_back.pdf*.
+Os problemas e soluções desejáveis estão no arquivo *case_analitico_back.pdf*.
 
 ## Envio
 
