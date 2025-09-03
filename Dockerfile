@@ -38,6 +38,6 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 COPY ./ /var/www/html
  
 # Remove vendor e composer.lock
+RUN composer install
 RUN chown -R www-data storage
  
-RUN composer install
