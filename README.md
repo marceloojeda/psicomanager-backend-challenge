@@ -10,10 +10,8 @@ Os problemas e soluções desejáveis estão no arquivo *case_analitico_back.pdf
 ## Envio
 
 -  Faça o clone desse repositorio
--  Instale as dependencias do projeto usando o *composer*
 -  Suba o ambiente local usando o *docker-compose*
--  Execute o *artisan migrate* para implantar a estrutura de banco de dados
--  Execute o *artisan seed* para popular registros nas tabelas users e tasks
+-  Dentro do container php_container, execute os *migrate e db:seed* do artisan para implantar a estrutura de banco de dados e massa de dados.
 -  Resolva os problemas/tarefas descritos no arquivo *case_analitico_back.pdf*
 -  Crie sua branch e mande um *pull request* pra nós
 

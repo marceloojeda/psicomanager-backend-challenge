@@ -1,14 +1,14 @@
-version: '3.3'
+# version: '3.8'
 
 services:
   nginx:
     image: nginx:latest
     container_name: nginx_container
     ports:
-      - "8080:80"
+      - "8888:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./public:/var/www/html
+      - ./:/var/www/html
     depends_on:
       - php
     networks:
@@ -25,20 +25,21 @@ services:
       - mysql
     networks:
       - app-network
-    command: >
-      sh -c "
-      php artisan migrate --force &&
-      php-fpm
-      "
+    # command: >
+    #   sh -c "
+    #   php artisan migrate --force &&
+    #   php artisan db:seed &&
+    #   php-fpm
+    #   "
 
   mysql:
     image: mysql:8.0
     container_name: mysql_container
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: psico-case
-      # MYSQL_USER: user
-      # MYSQL_PASSWORD: userpassword
+      MYSQL_DATABASE: psico_case
+      MYSQL_USER: lumen
+      MYSQL_PASSWORD: lumen
     ports:
       - "3306:3306"
     networks:
