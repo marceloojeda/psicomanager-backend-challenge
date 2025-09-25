@@ -19,15 +19,24 @@ class UserControllerTest extends TestCase
         $this->get('/users');
 
         $this->assertEquals(200, $this->response->getStatusCode());
-        $this->seeJsonStructure([
-            '*' => [
-                'id',
-                'name',
-                'email',
-                'created_at',
-                'updated_at'
-            ]
-        ]);
+        
+        $response = json_decode($this->response->getContent(), true);
+        
+        // Verificar estrutura com UserResource
+        $this->assertArrayHasKey('data', $response);
+        $this->assertIsArray($response['data']);
+        
+        // Verificar que campos sensíveis não estão sendo expostos
+        foreach ($response['data'] as $user) {
+            $this->assertArrayNotHasKey('password', $user);
+            $this->assertArrayNotHasKey('remember_token', $user);
+            // Verificar que campos permitidos estão presentes
+            $this->assertArrayHasKey('id', $user);
+            $this->assertArrayHasKey('name', $user);
+            $this->assertArrayHasKey('email', $user);
+            $this->assertArrayHasKey('created_at', $user);
+            $this->assertArrayHasKey('updated_at', $user);
+        }
     }
 
     public function test_users_index_filter_by_id()
@@ -79,9 +88,10 @@ class UserControllerTest extends TestCase
         
         // Verificar se retornou apenas os usuários com "João" no nome
         $response = json_decode($this->response->getContent(), true);
-        $this->assertCount(2, $response);
+        $this->assertArrayHasKey('data', $response);
+        $this->assertCount(2, $response['data']);
         
-        foreach ($response as $user) {
+        foreach ($response['data'] as $user) {
             $this->assertStringContainsString('João', $user['name']);
         }
     }
@@ -130,8 +140,9 @@ class UserControllerTest extends TestCase
         
         // Verificar se retornou array vazio
         $response = json_decode($this->response->getContent(), true);
-        $this->assertCount(0, $response);
-        $this->assertEquals([], $response);
+        $this->assertArrayHasKey('data', $response);
+        $this->assertCount(0, $response['data']);
+        $this->assertEquals([], $response['data']);
     }
 
     public function test_get_user_by_id()
@@ -159,17 +170,16 @@ class UserControllerTest extends TestCase
         
         $response = json_decode($this->response->getContent(), true);
         
-        // Verificar estrutura de paginação
-        $this->assertArrayHasKey('current_page', $response);
+        // Verificar estrutura de paginação com UserResource
         $this->assertArrayHasKey('data', $response);
-        $this->assertArrayHasKey('total', $response);
-        $this->assertArrayHasKey('per_page', $response);
+        $this->assertArrayHasKey('meta', $response);
+        $this->assertArrayHasKey('links', $response);
         
         // Verificar dados da paginação
-        $this->assertEquals(1, $response['current_page']);
-        $this->assertEquals(3, $response['per_page']);
+        $this->assertEquals(1, $response['meta']['current_page']);
+        $this->assertEquals(3, $response['meta']['per_page']);
         $this->assertCount(3, $response['data']); // 3 usuários na primeira página
-        $this->assertGreaterThanOrEqual(7, $response['total']); // Total de usuários
+        $this->assertGreaterThanOrEqual(7, $response['meta']['total']); // Total de usuários
     }
 
     public function test_users_index_pagination_with_filters()
@@ -188,10 +198,11 @@ class UserControllerTest extends TestCase
         
         // Verificar que a paginação funciona com filtros
         $this->assertArrayHasKey('data', $response);
-        $this->assertEquals(1, $response['current_page']);
-        $this->assertEquals(2, $response['per_page']);
+        $this->assertArrayHasKey('meta', $response);
+        $this->assertEquals(1, $response['meta']['current_page']);
+        $this->assertEquals(2, $response['meta']['per_page']);
         $this->assertCount(2, $response['data']); // 2 usuários na primeira página
-        $this->assertEquals(3, $response['total']); // 3 usuários com "João"
+        $this->assertEquals(3, $response['meta']['total']); // 3 usuários com "João"
     }
 
     public function test_users_index_without_pagination_parameters()
@@ -205,10 +216,11 @@ class UserControllerTest extends TestCase
         
         $response = json_decode($this->response->getContent(), true);
         
-        // Sem parâmetros de paginação, deve retornar array simples (não paginado)
-        $this->assertIsArray($response);
-        $this->assertArrayNotHasKey('current_page', $response); // Não deve ter estrutura de paginação
-        $this->assertGreaterThanOrEqual(3, count($response));
+        // Sem parâmetros de paginação, deve retornar estrutura simples com UserResource
+        $this->assertArrayHasKey('data', $response);
+        $this->assertIsArray($response['data']);
+        $this->assertArrayNotHasKey('meta', $response); // Não deve ter estrutura de paginação
+        $this->assertGreaterThanOrEqual(3, count($response['data']));
     }
 
     public function test_get_user_by_id_invalid_non_numeric()
@@ -250,5 +262,41 @@ class UserControllerTest extends TestCase
             'error' => 'Usuário não encontrado.',
             'message' => 'Usuário com ID 999 não existe.'
         ]);
+    }
+
+    public function test_get_user_by_id_does_not_expose_sensitive_data()
+    {
+        $user = User::factory()->create([
+            'name' => 'João Silva', 
+            'email' => 'joao@example.com',
+            'password' => app('hash')->make('senha123')
+        ]);
+
+        $this->get('/users/' . $user->id);
+
+        $this->assertEquals(200, $this->response->getStatusCode());
+        
+        $response = json_decode($this->response->getContent(), true);
+        
+        // Verificar estrutura com UserResource
+        $this->assertArrayHasKey('data', $response);
+        
+        $userData = $response['data'];
+        
+        // Verificar que campos sensíveis não estão sendo expostos
+        $this->assertArrayNotHasKey('password', $userData);
+        $this->assertArrayNotHasKey('remember_token', $userData);
+        
+        // Verificar que campos permitidos estão presentes
+        $this->assertArrayHasKey('id', $userData);
+        $this->assertArrayHasKey('name', $userData);
+        $this->assertArrayHasKey('email', $userData);
+        $this->assertArrayHasKey('created_at', $userData);
+        $this->assertArrayHasKey('updated_at', $userData);
+        
+        // Verificar valores corretos
+        $this->assertEquals($user->id, $userData['id']);
+        $this->assertEquals('João Silva', $userData['name']);
+        $this->assertEquals('joao@example.com', $userData['email']);
     }
 }

@@ -65,13 +65,76 @@ function index(Request $request)
 
 ---
 
-## Problema 2: Senha dos Usuários Expostas (A ser implementado)
+## Problema 2: Senha dos Usuários Expostas
 
 ### Diagnóstico
-[A ser documentado]
+**Problema identificado:**
+- O endpoint GET /users estava retornando todos os campos do modelo User, incluindo campos sensíveis como `password` e `remember_token`
+
+**Evidência:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "João Silva",
+      "email": "joao@example.com",
+      "password": "$2y$10$...", // ⚠️ VULNERABILIDADE
+      "remember_token": "abc123", // ⚠️ VULNERABILIDADE
+      "created_at": "2024-12-23T14:30:00Z"
+    }
+  ]
+}
+```
 
 ### Solução
-[A ser implementada]
+**Implementação de API Resource:**
+
+1. **Criação da UserResource.php:**
+```php
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class UserResource extends JsonResource
+{
+    public function toArray($request)
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
+    }
+}
+```
+
+2. **Atualização do UserController:**
+```php
+use App\Http\Resources\UserResource;
+
+public function index(Request $request)
+{
+    // ... lógica de filtros e paginação
+    return UserResource::collection($users);
+}
+
+public function get($id)
+{
+    // ... validação
+    return new UserResource($user);
+}
+```
+
+**Resultados:**
+- ✅ Senhas e tokens não são mais expostos
+- ✅ API retorna apenas campos seguros e necessários  
+- ✅ Padrão de segurança implementado para futuras expansões
+- ✅ Compatibilidade com estrutura de resposta padronizada
 
 ---
 

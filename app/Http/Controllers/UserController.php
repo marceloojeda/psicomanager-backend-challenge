@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -28,11 +29,11 @@ class UserController extends Controller
 
         if ($request->has('page') || $request->has('per_page')) {
             $users = $query->paginate($perPage);
-            return response()->json($users);
+            return UserResource::collection($users);
         } else {
             // Mantém compatibilidade: sem parâmetros de paginação, retorna tudo
             $users = $query->get();
-            return response()->json($users);
+            return UserResource::collection($users);
         }
     }
     
@@ -47,7 +48,7 @@ class UserController extends Controller
 
         try {
             $user = User::where('id', $userId)->firstOrFail();
-            return response()->json($user);
+            return new UserResource($user);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'error' => 'Usuário não encontrado.',
