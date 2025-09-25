@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Task;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -88,10 +89,44 @@ class UserController extends Controller
 
     function delete($userId)
     {
-        $user = User::where('id', $userId)->firstOrFail();
+        // Validação do ID - deve ser numérico e positivo
+        if (!is_numeric($userId) || $userId <= 0) {
+            return response()->json([
+                'error' => 'ID inválido. O ID deve ser um número positivo.'
+            ], 400);
+        }
 
-        $user->delete();
+        try {
+            $user = User::where('id', $userId)->firstOrFail();
+            
+            // Verificar se o usuário possui tarefas associadas
+            $tasksCount = Task::where('user_id', $userId)->count();
+            
+            if ($tasksCount > 0) {
+                return response()->json([
+                    'error' => 'Não é possível excluir o usuário.',
+                    'message' => "O usuário possui {$tasksCount} tarefas associadas. Exclua ou reatribua as tarefas primeiro.",
+                    'tasks_count' => $tasksCount
+                ], 409); // Conflict - violação de integridade referencial
+            }
 
-        return response("Usuario excluido com sucesso", Response::HTTP_ACCEPTED);
+            $user->delete();
+
+            return response()->json([
+                'message' => 'Usuário excluído com sucesso.',
+                'user_id' => $userId
+            ], 200);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Usuário não encontrado.',
+                'message' => "Usuário com ID {$userId} não existe."
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erro interno do servidor.',
+                'message' => 'Falha ao excluir o usuário.'
+            ], 500);
+        }
     }
 }

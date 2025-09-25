@@ -362,8 +362,6 @@ function index(Request $request)
 - ✅ **Segurança**: Limites previnem ataques de DoS
 - ✅ **Padrões REST**: Paginação com metadados completos
 
-**Testes implementados:** 11 casos cobrindo performance, paginação, validação e edge cases
-
 ---
 
 ## Problema 6: Emails Duplicados
@@ -439,13 +437,63 @@ Resposta: 422 Unprocessable Entity ✅
 
 ---
 
-## Problema 7: Falha ao Excluir Usuários com Tarefas (A ser implementado)
+## Problema 7: Falha ao Excluir Usuários com Tarefas 
 
-### Diagnóstico
-[A ser documentado]
+### DIAGNÓSTICO
 
-### Solução
-[A ser implementada]
+O endpoint `DELETE /users/{id}` estava permitindo a exclusão de usuários sem verificar se eles possuem tarefas associadas, o que resultava em:
+
+1. **Violação de integridade referencial**: Tasks ficando órfãs no banco de dados
+2. **Inconsistência de dados**: Referências a usuários inexistentes
+3. **Problemas de performance**: Queries desnecessárias em registros órfãos
+4. **Experiência ruim do usuário**: Exclusões sem validação adequada
+
+**Problemas identificados:**
+- Ausência de validação de relacionamentos antes da exclusão
+- Não informava ao usuário sobre tarefas associadas
+- Permitia exclusões que violavam a integridade dos dados
+- Falta de feedback adequado sobre o motivo da falha
+
+### SOLUÇÃO IMPLEMENTADA
+
+**1. Validação de Integridade Referencial**
+```php
+// UserController.php - método delete()
+public function delete($userId)
+{
+    $user = User::find($userId);
+    if (!$user) {
+        return response()->json([
+            'error' => 'Usuário não encontrado.',
+            'message' => "Usuário com ID {$userId} não existe."
+        ], 404);
+    }
+
+    // Verifica se o usuário possui tarefas associadas
+    $tasksCount = Task::where('user_id', $userId)->count();
+    if ($tasksCount > 0) {
+        return response()->json([
+            'error' => 'Não é possível excluir o usuário.',
+            'message' => "O usuário possui {$tasksCount} tarefas associadas. Exclua ou reatribua as tarefas primeiro.",
+            'tasks_count' => $tasksCount
+        ], 409); // Conflict status
+    }
+
+    $user->delete();
+    return response()->json([
+        'message' => 'Usuário excluído com sucesso.',
+        'user_id' => $userId
+    ], 200);
+}
+```
+
+### MELHORIAS ALCANÇADAS
+
+- ✅ **Integridade dos Dados**: Previne exclusões que violem relacionamentos
+- ✅ **Experiência do Usuário**: Feedback claro sobre impossibilidade de exclusão
+- ✅ **Manutenibilidade**: Código bem estruturado e testado
+- ✅ **Performance**: Verificação eficiente com count() ao invés de carregar registros
+- ✅ **Robustez**: Tratamento completo de todos os cenários possíveis
 
 ---
 
