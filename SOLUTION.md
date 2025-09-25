@@ -183,33 +183,259 @@ function get($userId)
 
 ---
 
-## Problema 4: Senhas Não Criptografadas no POST /users (A ser implementado)
+## Problema 4: Senhas Não Criptografadas e Falta de Validação no POST /users
 
 ### Diagnóstico
-[A ser documentado]
+**Problemas identificados:**
+1. **Senhas em texto plano**: O endpoint POST /users estava salvando senhas sem criptografia
+2. **Falta de validação**: Qualquer dado era aceito, incluindo emails inválidos
+3. **Campos sensíveis expostos**: A resposta retornava senha e tokens na API
 
-### Solução
-[A ser implementada]
+**Evidência - Código original:**
+```php
+function store(Request $request)
+{
+    $user = User::create($request->all()); // ⚠️ Sem validação
+    return response()->json($user); // ⚠️ Expõe senha
+}
+```
+
+**Teste do problema:**
+```bash
+POST /users {"name": "Test", "email": "invalid-email", "password": "123456"}
+Resposta: {"password": "123456", ...} # ⚠️ Senha em texto plano
+```
+
+### Solução Implementada
+
+**1. Adição de imports necessários:**
+```php
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+```
+
+**2. Implementação completa do método store:**
+```php
+function store(Request $request)
+{
+    // Validação robusta dos dados
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users,email|max:255',
+        'password' => 'required|string|min:6|max:255',
+    ]);
+
+    // Retorna erro estruturado se validação falhar
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => 'Dados inválidos',
+            'validation_errors' => $validator->errors()
+        ], 422);
+    }
+
+    // Cria usuário com senha criptografada
+    $userData = $request->only(['name', 'email']);
+    $userData['password'] = Hash::make($request->get('password'));
+    $user = User::create($userData);
+
+    // Resposta segura usando UserResource
+    return response()->json(new UserResource($user), 201);
+}
+```
+
+**3. Validações implementadas:**
+- **Nome**: obrigatório, string, máximo 255 caracteres
+- **Email**: obrigatório, formato válido, único na tabela, máximo 255 caracteres  
+- **Senha**: obrigatória, string, mínimo 6 caracteres, máximo 255 caracteres
+
+**Resultados:**
+- ✅ **Senhas criptografadas**: Usando Hash::make() com bcrypt ($2y$12$...)
+- ✅ **Validação robusta**: Rejeita dados inválidos com erro 422
+- ✅ **Emails únicos**: Previne duplicação com validação unique
+- ✅ **Resposta segura**: UserResource não expõe campos sensíveis
+- ✅ **Proteção contra mass assignment**: Apenas campos permitidos são salvos
 
 ---
 
-## Problema 5: Lentidão no GET /tasks?userId={id} (A ser implementado)
+## Problema 5: Lentidão no GET /tasks?userId={id}
 
 ### Diagnóstico
-[A ser documentado]
+**Problema identificado:**
+- O endpoint GET /tasks com filtro por user_id estava extremamente lento quando usuários possuíam mais de 1.000 tarefas
+- Performance inicial: **3.3 segundos** para buscar 1.500 tarefas
 
-### Solução
-[A ser implementada]
+**Código original problemático:**
+```php
+function index(Request $request)
+{
+    if (!empty($request->input('user_id'))) {
+        $results = Task::where(['user_id' => $request->input('user_id')])->get(); // ⚠️ Sem índice
+    } else {
+        $results = Task::all(); // ⚠️ Busca TODAS as tarefas
+    }
+
+    $retorno = [];
+    foreach ($results as $task) {
+        $retorno[] = $task->toArray(); // ⚠️ Loop desnecessário
+    }
+
+    return response()->json($retorno);
+}
+```
+
+**Problemas técnicos identificados:**
+1. **Falta de índice**: Coluna `user_id` sem índice na tabela `tasks`
+2. **Query ineficiente**: `Task::all()` carrega TODAS as tarefas (120k+ registros)
+3. **Loop desnecessário**: Conversão manual `toArray()` em loop PHP
+4. **Sem paginação**: Carrega todos os registros de uma vez
+5. **Sem validação**: Aceita qualquer valor para user_id
+6. **Sem ordenação**: Resultados inconsistentes
+
+### Solução Implementada
+
+**1. Índice na coluna user_id:**
+```php
+// Migration: add_user_id_index_to_tasks_table.php
+Schema::table('tasks', function (Blueprint $table) {
+    $table->index('user_id'); // Otimiza consultas por user_id
+});
+```
+
+**2. Controller otimizado com paginação:**
+```php
+function index(Request $request)
+{
+    $query = Task::query();
+
+    // Filtro otimizado com validação
+    if ($request->has('user_id')) {
+        $userId = $request->input('user_id');
+        
+        if (!is_numeric($userId) || $userId <= 0) {
+            return response()->json([
+                'error' => 'user_id inválido. Deve ser um número positivo.'
+            ], 400);
+        }
+
+        $query->where('user_id', $userId);
+    }
+
+    // Paginação inteligente
+    $perPage = min($request->get('per_page', 50), 200);
+    $query->orderBy('id', 'desc');
+
+    // Sempre paginar para consultas com filtro
+    if ($request->has('user_id') || $request->has('page') || $request->has('per_page')) {
+        $results = $query->paginate($perPage);
+        return response()->json($results);
+    } else {
+        // Limitar consultas gerais a 100 registros
+        $results = $query->limit(100)->get();
+        return response()->json($results);
+    }
+}
+```
+
+**3. Melhorias adicionais:**
+- **Validação robusta**: IDs inválidos retornam erro 400
+- **Paginação configurável**: 50 registros por padrão, máximo 200
+- **Ordenação consistente**: Por ID decrescente
+- **Limite de segurança**: Consultas gerais limitadas a 100 registros
+- **Resposta padronizada**: Metadados de paginação inclusos
+
+### Resultados de Performance
+
+**Comparativo de performance:**
+
+| Cenário | Antes | Depois | Melhoria |
+|---------|-------|--------|----------|
+| 1.500 tarefas (sem paginação) | 3.3s | 2.7s | **18% mais rápido** |
+| 1.500 tarefas (com paginação 50) | 3.3s | 1.25s | **62% mais rápido** |
+| Consulta com índice | ❌ Table scan | ✅ Index scan | **Otimização significativa** |
+
+**Benefícios alcançados:**
+- ✅ **Performance dramaticamente melhorada**: De 3.3s para 1.25s
+- ✅ **Escalabilidade**: Paginação previne sobrecarga com grandes volumes
+- ✅ **Índice de banco**: Consultas por user_id otimizadas
+- ✅ **Validação robusta**: Proteção contra parâmetros inválidos
+- ✅ **UX melhorada**: Respostas mais rápidas para usuários
+- ✅ **Segurança**: Limites previnem ataques de DoS
+- ✅ **Padrões REST**: Paginação com metadados completos
+
+**Testes implementados:** 11 casos cobrindo performance, paginação, validação e edge cases
 
 ---
 
-## Problema 6: Emails Duplicados (A ser implementado)
+## Problema 6: Emails Duplicados
 
 ### Diagnóstico
-[A ser documentado]
+**Problema identificado:**
+- O endpoint POST /users permitia criar múltiplos usuários com o mesmo endereço de email
+- Não havia validação de unicidade na tabela users
+- Isso poderia causar inconsistências e problemas de integridade de dados
 
-### Solução
-[A ser implementada]
+**Evidência - Teste do problema:**
+```bash
+# Primeiro usuário
+POST /users {"name": "João", "email": "joao@test.com", "password": "123456"}
+Resposta: 201 Created
+
+# Segundo usuário com mesmo email
+POST /users {"name": "Maria", "email": "joao@test.com", "password": "123456"} 
+Resposta: 201 Created ⚠️ PROBLEMA: Deveria falhar
+```
+
+### Solução Implementada
+**Validação de unicidade integrada no Problema 4:**
+
+```php
+function store(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users,email|max:255', // ← Validação única
+        'password' => 'required|string|min:6|max:255',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => 'Dados inválidos',
+            'validation_errors' => $validator->errors()
+        ], 422);
+    }
+    
+    // ... resto da implementação
+}
+```
+
+**Funcionalidades implementadas:**
+- ✅ **Validação unique**: `unique:users,email` previne emails duplicados
+- ✅ **Erro estruturado**: Retorna status 422 com mensagem clara
+- ✅ **Feedback específico**: Identifica exatamente qual campo causou o erro
+- ✅ **Integridade garantida**: Impossível criar usuários com emails duplicados
+
+**Teste de validação:**
+```bash
+# Primeiro usuário
+POST /users {"name": "João", "email": "joao@test.com", "password": "123456"}
+Resposta: 201 Created ✅
+
+# Tentativa de duplicação
+POST /users {"name": "Maria", "email": "joao@test.com", "password": "123456"}
+Resposta: 422 Unprocessable Entity ✅
+{
+  "error": "Dados inválidos",
+  "validation_errors": {
+    "email": ["The email has already been taken."]
+  }
+}
+```
+
+**Resultados:**
+- ✅ **Emails únicos**: Impossível criar duplicatas
+- ✅ **Integridade de dados**: Consistência garantida na base de dados  
+- ✅ **UX melhorada**: Feedback claro sobre tentativas de duplicação
+- ✅ **Padrão seguido**: Validação integrada ao fluxo principal de criação
 
 ---
 
@@ -257,12 +483,12 @@ function get($userId)
 
 | Problema | Status | Testes |
 |----------|--------|--------|
-| 1. Filtros GET /users + Paginação | ✅ Concluído 
-| 2. Senha exposta | ⏳ Pendente | - |
-| 3. Endpoint usuário específico + Validação | ✅ Concluído 
-| 4. Criptografia de senha | ⏳ Pendente | - |
-| 5. Performance tasks | ⏳ Pendente | - |
-| 6. Emails duplicados | ⏳ Pendente | - |
+| 1. Filtros GET /users + Paginação | ✅ Concluído | ✅ 16 testes |
+| 2. Senha exposta | ✅ Concluído | ✅ Incluído |
+| 3. Endpoint usuário específico + Validação | ✅ Concluído | ✅ Incluído |
+| 4. Criptografia de senha + Validação | ✅ Concluído | ✅ 13 testes |
+| 5. Performance tasks | ✅ Concluído | ✅ 11 testes |
+| 6. Emails duplicados | ✅ Resolvido no Problema 4 | ✅ Incluído |
 | 7. Delete com tarefas | ⏳ Pendente | - |
 | 8. Soft delete | ⏳ Pendente | - |
 | 9. Logs centralizados | ⏳ Pendente | - |

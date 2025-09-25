@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -59,9 +61,29 @@ class UserController extends Controller
     
     function store(Request $request)
     {
-        $user = User::create($request->all());
+        // Validação dos dados de entrada
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email|max:255',
+            'password' => 'required|string|min:6|max:255',
+        ]);
 
-        return response()->json($user);
+        // Retorna erro de validação se houver
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Dados inválidos',
+                'validation_errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Cria o usuário com senha criptografada
+        $userData = $request->only(['name', 'email']);
+        $userData['password'] = Hash::make($request->get('password'));
+
+        $user = User::create($userData);
+
+        // Retorna usando UserResource para não expor campos sensíveis
+        return response()->json(new UserResource($user), 201);
     }
 
     function delete($userId)

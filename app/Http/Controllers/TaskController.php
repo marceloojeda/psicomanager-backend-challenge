@@ -18,26 +18,56 @@ class TaskController extends Controller
 
     function index(Request $request)
     {
-        if (!empty($request->input('user_id'))) {
+        $query = Task::query();
 
-            $results = Task::where(['user_id' => $request->input('user_id')])->get();
+        // Filtro por user_id com otimização
+        if ($request->has('user_id')) {
+            $userId = $request->input('user_id');
+            
+            // Validação do user_id
+            if (!is_numeric($userId) || $userId <= 0) {
+                return response()->json([
+                    'error' => 'user_id inválido. Deve ser um número positivo.'
+                ], 400);
+            }
+
+            $query->where('user_id', $userId);
+        }
+
+        // Paginação para performance
+        $perPage = min($request->get('per_page', 50), 200); // Máximo 200 por página
+        
+        // Ordenação padrão por ID para consistência na paginação
+        $query->orderBy('id', 'desc');
+
+        // Usar paginação sempre para grandes volumes
+        if ($request->has('user_id') || $request->has('page') || $request->has('per_page')) {
+            $results = $query->paginate($perPage);
+            return response()->json($results);
         } else {
-
-            $results = Task::all();
+            // Para consultas gerais sem filtro, limitar a 100 registros
+            $results = $query->limit(100)->get();
+            return response()->json($results);
         }
-
-        $retorno = [];
-        foreach ($results as $task) {
-
-            $retorno[] = $task->toArray();
-        }
-
-        return response()->json($retorno);
     }
 
     function get($taskId)
     {
-        $task = Task::where('id', $taskId)->firstOrFail();
-        return response()->json($task);
+        // Validação do taskId
+        if (!is_numeric($taskId) || $taskId <= 0) {
+            return response()->json([
+                'error' => 'ID inválido. O ID deve ser um número positivo.'
+            ], 400);
+        }
+
+        try {
+            $task = Task::where('id', $taskId)->firstOrFail();
+            return response()->json($task);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Tarefa não encontrada.',
+                'message' => "Tarefa com ID {$taskId} não existe."
+            ], 404);
+        }
     }
 }
