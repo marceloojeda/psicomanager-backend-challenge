@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Traits\LogsOperations;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
+    use LogsOperations;
     /**
      * Create a new controller instance.
      *
@@ -30,6 +32,12 @@ class TaskController extends Controller
                     'error' => 'user_id inválido. Deve ser um número positivo.'
                 ], 400);
             }
+
+            // Log task query by user
+            $this->logOperation('tasks_queried_by_user', [
+                'user_id' => $userId,
+                'per_page' => min($request->get('per_page', 50), 200)
+            ]);
 
             $query->where('user_id', $userId);
         }

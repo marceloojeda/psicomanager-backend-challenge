@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Task;
 use App\Http\Resources\UserResource;
+use App\Traits\LogsOperations;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
+    use LogsOperations;
     function index(Request $request)
     {
         $query = User::query();
@@ -82,10 +84,31 @@ class UserController extends Controller
         $userData = $request->only(['name', 'email']);
         $userData['password'] = Hash::make($request->get('password'));
 
-        $user = User::create($userData);
+        try {
+            $user = User::create($userData);
 
-        // Retorna usando UserResource para não expor campos sensíveis
-        return response()->json(new UserResource($user), 201);
+            // Log successful user creation
+            $this->logOperation('user_created', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'created_at' => $user->created_at->toISOString()
+            ]);
+
+            // Retorna usando UserResource para não expor campos sensíveis
+            return response()->json(new UserResource($user), 201);
+            
+        } catch (\Exception $e) {
+            // Log error
+            $this->logError('user_creation_failed', $e, [
+                'attempted_data' => $request->only(['name', 'email'])
+            ]);
+            
+            return response()->json([
+                'error' => 'Erro interno do servidor.',
+                'message' => 'Falha ao criar usuário.'
+            ], 500);
+        }
     }
 
     function delete($userId)
@@ -106,6 +129,15 @@ class UserController extends Controller
             
             $user->delete(); // Soft delete - apenas marca deleted_at
 
+            // Log successful user deletion (audit event)
+            $this->logAudit('user_soft_deleted', [
+                'user_id' => $userId,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'tasks_preserved' => $tasksCount,
+                'deleted_at' => $user->deleted_at->toISOString()
+            ]);
+
             return response()->json([
                 'message' => 'Usuário excluído com sucesso (soft delete).',
                 'user_id' => $userId,
@@ -114,11 +146,22 @@ class UserController extends Controller
             ], 200);
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Log failed deletion attempt
+            $this->logOperation('user_deletion_failed', [
+                'user_id' => $userId,
+                'reason' => 'user_not_found'
+            ], 'warning');
+            
             return response()->json([
                 'error' => 'Usuário não encontrado.',
                 'message' => "Usuário com ID {$userId} não existe."
             ], 404);
         } catch (\Exception $e) {
+            // Log error
+            $this->logError('user_deletion_error', $e, [
+                'user_id' => $userId
+            ]);
+            
             return response()->json([
                 'error' => 'Erro interno do servidor.',
                 'message' => 'Falha ao excluir o usuário.'
@@ -165,6 +208,15 @@ class UserController extends Controller
             // Restaurar o usuário (remove o deleted_at)
             $user->restore();
 
+            // Log successful user restoration (audit event)
+            $this->logAudit('user_restored', [
+                'user_id' => $userId,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'tasks_associated' => $tasksCount,
+                'restored_at' => Carbon::now()->toISOString()
+            ]);
+
             return response()->json([
                 'message' => 'Usuário restaurado com sucesso.',
                 'user_id' => $userId,
@@ -178,6 +230,11 @@ class UserController extends Controller
             ], 200);
             
         } catch (\Exception $e) {
+            // Log error
+            $this->logError('user_restoration_error', $e, [
+                'user_id' => $userId
+            ]);
+            
             return response()->json([
                 'error' => 'Erro interno do servidor.',
                 'message' => 'Falha ao restaurar o usuário.'

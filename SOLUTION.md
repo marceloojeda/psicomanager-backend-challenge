@@ -686,13 +686,156 @@ public function restore($userId)
 
 ---
 
-## Problema 9: Logs das Operações (A ser implementado)
+## Problema 9: Logs das Operações 
 
-### Diagnóstico
-[A ser documentado]
+### DIAGNÓSTICO
 
-### Solução
-[A ser implementada]
+O sistema não estava gravando logs estruturados das operações importantes, resultando em:
+
+1. **Falta de auditoria**: Impossibilidade de rastrear quem fez o quê e quando
+2. **Debugging dificultado**: Ausência de logs estruturados para investigação de problemas
+3. **Compliance prejudicado**: Não atendimento a requisitos regulatórios de auditoria
+4. **Monitoramento limitado**: Falta de visibilidade sobre operações do sistema
+5. **Análise de uso impossibilitada**: Sem dados para análise de comportamento e performance
+
+### SOLUÇÃO IMPLEMENTADA
+
+**1. Sistema de Logging Estruturado**
+```php
+// app/Providers/LoggingServiceProvider.php
+public function boot(): void
+{
+    // Logger para operações de negócio
+    $operationLogger = new Logger('operations');
+    $operationHandler = new RotatingFileHandler(
+        storage_path('logs/operations.log'), 7, Logger::INFO
+    );
+    $operationHandler->setFormatter(new JsonFormatter());
+    
+    // Logger para auditoria (operações sensíveis)
+    $auditLogger = new Logger('audit');
+    $auditHandler = new RotatingFileHandler(
+        storage_path('logs/audit.log'), 30, Logger::WARNING
+    );
+    $auditHandler->setFormatter(new JsonFormatter());
+}
+```
+
+**2. Trait para Facilitar Logging**
+```php
+// app/Traits/LogsOperations.php
+trait LogsOperations
+{
+    protected function logOperation(string $operation, array $data = [], string $level = 'info'): void
+    {
+        $logData = [
+            'timestamp' => Carbon::now()->toISOString(),
+            'operation' => $operation,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'data' => $data
+        ];
+        
+        app('operation.logger')->log($level, $operation, $logData);
+    }
+    
+    protected function logAudit(string $action, array $data = []): void
+    {
+        // Logs de auditoria para operações sensíveis
+        app('audit.logger')->warning($action, $auditData);
+    }
+    
+    protected function logError(string $operation, \Exception $exception, array $context = []): void
+    {
+        // Logs de erro com stack trace completo
+        app('operation.logger')->error($operation . ' failed', $errorData);
+    }
+}
+```
+
+**3. Operações Monitoradas**
+
+**Operações de Usuários:**
+- ✅ `user_created`: Criação de usuários com dados completos
+- ✅ `user_soft_deleted`: Exclusão soft com informações preservadas
+- ✅ `user_restored`: Restauração de usuários com timestamp
+- ✅ `user_creation_failed`: Falhas na criação com contexto do erro
+- ✅ `user_deletion_failed`: Tentativas de exclusão falhadas
+- ✅ `user_restoration_error`: Erros na restauração
+
+**Operações de Tarefas:**
+- ✅ `tasks_queried_by_user`: Consultas específicas por usuário
+- ✅ Logs discretos para evitar volume excessivo
+
+**4. Estrutura dos Logs JSON**
+```json
+{
+  "message": "user_created",
+  "context": {
+    "timestamp": "2025-09-26T13:14:13.229377Z",
+    "operation": "user_created",
+    "ip_address": "172.19.0.1",
+    "user_agent": "Mozilla/5.0...",
+    "data": {
+      "user_id": 146,
+      "user_name": "Test User for Logging",
+      "user_email": "logging@test.com",
+      "created_at": "2025-09-26T13:14:13.000000Z"
+    }
+  },
+  "level": 200,
+  "level_name": "INFO",
+  "channel": "operations",
+  "datetime": "2025-09-26T13:14:13.254386+00:00"
+}
+```
+
+**5. Comando de Visualização de Logs**
+```php
+// app/Console/Commands/ViewLogsCommand.php
+php artisan logs:view operations --lines=10
+php artisan logs:view audit --lines=5
+php artisan logs:view all --date=2025-09-26
+```
+
+### TIPOS DE LOGS IMPLEMENTADOS
+
+**Logs de Operações (`operations.log`)**:
+- Retenção: 7 dias (rotativo)
+- Nível: INFO
+- Conteúdo: Operações de negócio normais
+- Formato: JSON estruturado
+
+**Logs de Auditoria (`audit.log`)**:
+- Retenção: 30 dias (rotativo)
+- Nível: WARNING
+- Conteúdo: Operações sensíveis (exclusão, restauração)
+- Formato: JSON estruturado
+
+**Logs de Erro**:
+- Stack trace completo
+- Contexto da operação
+- Dados da requisição
+
+### MELHORIAS IMPLEMENTADAS
+
+- ✅ **Auditoria Completa**: Todas as operações sensíveis registradas
+- ✅ **Estrutura JSON**: Logs em formato estruturado para análise
+- ✅ **Rotação Automática**: Gestão inteligente do espaço em disco
+- ✅ **Múltiplos Canais**: Separação entre operações e auditoria
+- ✅ **Informações Contextuais**: IP, User-Agent, timestamps precisos
+- ✅ **Ferramenta de Visualização**: Comando artisan para análise
+- ✅ **Níveis de Log**: INFO, WARNING, ERROR apropriados
+- ✅ **Retenção Configurável**: 7 dias (operações) / 30 dias (auditoria)
+
+### IMPACTO DA SOLUÇÃO
+
+- ✅ **Compliance Regulatório**: Atende requisitos de auditoria
+- ✅ **Debugging Facilitado**: Logs estruturados para investigação
+- ✅ **Monitoramento Eficaz**: Visibilidade completa das operações
+- ✅ **Análise de Uso**: Dados para otimização e comportamento
+- ✅ **Segurança Aprimorada**: Rastreamento de todas as ações
+- ✅ **Performance Otimizada**: Logs rotativos evitam acúmulo excessivo
 
 ---
 
