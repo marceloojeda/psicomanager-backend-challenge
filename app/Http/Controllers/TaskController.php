@@ -18,6 +18,56 @@ class TaskController extends Controller
     {
     }
 
+    /**
+     * @OA\Get(
+     *     path="/tasks",
+     *     tags={"Tasks"},
+     *     summary="Lista todas as tarefas",
+     *     description="Retorna uma lista paginada de tarefas com opções de filtros",
+     *     @OA\Parameter(
+     *         name="user_id",
+     *         in="query",
+     *         description="Filtrar tarefas por ID do usuário responsável",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=77)
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Número da página",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Quantidade de itens por página (máximo 50)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=50, maximum=50)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de tarefas retornada com sucesso",
+     *         @OA\JsonContent(
+     *             allOf={
+     *                 @OA\Schema(ref="#/components/schemas/PaginatedResponse"),
+     *                 @OA\Schema(
+     *                     @OA\Property(
+     *                         property="data",
+     *                         type="array",
+     *                         @OA\Items(ref="#/components/schemas/Task")
+     *                     )
+     *                 )
+     *             }
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Parâmetros inválidos",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
     function index(Request $request)
     {
         $query = Task::query();
@@ -59,6 +109,36 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/tasks/{taskId}",
+     *     tags={"Tasks"},
+     *     summary="Buscar tarefa por ID",
+     *     description="Retorna os dados de uma tarefa específica",
+     *     @OA\Parameter(
+     *         name="taskId",
+     *         in="path",
+     *         description="ID da tarefa",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dados da tarefa retornados com sucesso",
+     *         @OA\JsonContent(ref="#/components/schemas/Task")
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="ID inválido",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Tarefa não encontrada",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
     function get($taskId)
     {
         // Validação do taskId

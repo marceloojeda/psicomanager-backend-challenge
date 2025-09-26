@@ -95,6 +95,7 @@ $app->configure('app');
 // $app->register(App\Providers\AuthServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
 $app->register(App\Providers\LoggingServiceProvider::class);
+// $app->register(L5Swagger\L5SwaggerServiceProvider::class); // Incompatível com Lumen
 
 /*
 |--------------------------------------------------------------------------

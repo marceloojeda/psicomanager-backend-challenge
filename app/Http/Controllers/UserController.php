@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Task;
-use App\Http\Resources\UserResource;
 use App\Traits\LogsOperations;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -15,6 +14,64 @@ use Illuminate\Support\Facades\Validator;
 class UserController extends Controller
 {
     use LogsOperations;
+    
+    /**
+     * @OA\Get(
+     *     path="/users",
+     *     tags={"Users"},
+     *     summary="Lista todos os usuários",
+     *     description="Retorna uma lista paginada de usuários com opções de filtros",
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="query",
+     *         description="Filtrar por ID específico do usuário",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=77)
+     *     ),
+     *     @OA\Parameter(
+     *         name="name",
+     *         in="query",
+     *         description="Filtrar por nome do usuário (busca parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="João")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Número da página",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Quantidade de itens por página",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=15)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de usuários retornada com sucesso",
+     *         @OA\JsonContent(
+     *             allOf={
+     *                 @OA\Schema(ref="#/components/schemas/PaginatedResponse"),
+     *                 @OA\Schema(
+     *                     @OA\Property(
+     *                         property="data",
+     *                         type="array",
+     *                         @OA\Items(ref="#/components/schemas/User")
+     *                     )
+     *                 )
+     *             }
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Erro interno do servidor",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
     function index(Request $request)
     {
         $query = User::query();
@@ -35,34 +92,142 @@ class UserController extends Controller
 
         if ($request->has('page') || $request->has('per_page')) {
             $users = $query->paginate($perPage);
-            return UserResource::collection($users);
+            // Convertendo manualmente para evitar problemas com ResponseFactory no Lumen
+            $usersArray = [];
+            foreach ($users->items() as $user) {
+                $usersArray[] = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ];
+            }
+            
+            return [
+                'data' => $usersArray,
+                'current_page' => $users->currentPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+                'last_page' => $users->lastPage()
+            ];
         } else {
             // Mantém compatibilidade: sem parâmetros de paginação, retorna tudo
             $users = $query->get();
-            return UserResource::collection($users);
+            $usersArray = [];
+            foreach ($users as $user) {
+                $usersArray[] = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ];
+            }
+            return $usersArray;
         }
     }
     
+    /**
+     * @OA\Get(
+     *     path="/users/{userId}",
+     *     tags={"Users"},
+     *     summary="Buscar usuário por ID",
+     *     description="Retorna os dados de um usuário específico",
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         description="ID do usuário",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=77)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dados do usuário retornados com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="ID inválido",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuário não encontrado",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
     function get($userId)
     {
         // Validação do ID - deve ser numérico e positivo
         if (!is_numeric($userId) || $userId <= 0) {
-            return response()->json([
+            return [
                 'error' => 'ID inválido. O ID deve ser um número positivo.'
-            ], 400);
+            ];
         }
 
         try {
             $user = User::where('id', $userId)->firstOrFail();
-            return new UserResource($user);
+            return [
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ]
+            ];
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
+            return [
                 'error' => 'Usuário não encontrado.',
                 'message' => "Usuário com ID {$userId} não existe."
-            ], 404);
+            ];
         }
     }
     
+    /**
+     * @OA\Post(
+     *     path="/users",
+     *     tags={"Users"},
+     *     summary="Criar novo usuário",
+     *     description="Cria um novo usuário no sistema",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="João Silva", description="Nome completo do usuário"),
+     *             @OA\Property(property="email", type="string", format="email", example="joao@example.com", description="E-mail único do usuário"),
+     *             @OA\Property(property="password", type="string", example="123456", description="Senha (mínimo 6 caracteres)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Usuário criado com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             ),
+     *             @OA\Property(property="message", type="string", example="Usuário criado com sucesso")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Email já está em uso",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Dados de entrada inválidos",
+     *         @OA\JsonContent(ref="#/components/schemas/ValidationError")
+     *     )
+     * )
+     */
     function store(Request $request)
     {
         // Validação dos dados de entrada
@@ -74,10 +239,10 @@ class UserController extends Controller
 
         // Retorna erro de validação se houver
         if ($validator->fails()) {
-            return response()->json([
+            return [
                 'error' => 'Dados inválidos',
                 'validation_errors' => $validator->errors()
-            ], 422);
+            ];
         }
 
         // Cria o usuário com senha criptografada
@@ -95,8 +260,17 @@ class UserController extends Controller
                 'created_at' => $user->created_at->toISOString()
             ]);
 
-            // Retorna usando UserResource para não expor campos sensíveis
-            return response()->json(new UserResource($user), 201);
+            // Retorna usando dados estruturados para não expor campos sensíveis
+            return [
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ],
+                'message' => 'Usuário criado com sucesso'
+            ];
             
         } catch (\Exception $e) {
             // Log error
@@ -104,13 +278,45 @@ class UserController extends Controller
                 'attempted_data' => $request->only(['name', 'email'])
             ]);
             
-            return response()->json([
+            return [
                 'error' => 'Erro interno do servidor.',
                 'message' => 'Falha ao criar usuário.'
-            ], 500);
+            ];
         }
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/users/{userId}",
+     *     tags={"Users"},
+     *     summary="Excluir usuário (soft delete)",
+     *     description="Exclui um usuário do sistema usando soft delete. O usuário e suas tarefas associadas são marcados como excluídos",
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         description="ID do usuário a ser excluído",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=77)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Usuário excluído com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Usuário excluído com sucesso")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="ID inválido ou usuário já foi excluído",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuário não encontrado",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
     function delete($userId)
     {
         // Validação do ID - deve ser numérico e positivo
@@ -170,7 +376,45 @@ class UserController extends Controller
     }
 
     /**
-     * Restore a soft deleted user
+     * @OA\Patch(
+     *     path="/users/{userId}/restore",
+     *     tags={"Users"},
+     *     summary="Restaurar usuário excluído",
+     *     description="Restaura um usuário que foi excluído com soft delete, juntamente com suas tarefas associadas",
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         description="ID do usuário a ser restaurado",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=77)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Usuário restaurado com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             ),
+     *             @OA\Property(property="message", type="string", example="Usuário restaurado com sucesso")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="ID inválido ou usuário não está excluído",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuário não encontrado",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Conflito - já existe usuário ativo com este email",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function restore($userId)
     {
