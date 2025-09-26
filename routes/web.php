@@ -36,4 +36,5 @@ $router->group(['prefix' => 'users'], function () use ($router) {
     $router->get('/{userId}', 'UserController@get');
     $router->post('/', 'UserController@store');
     $router->delete('/{userId}', 'UserController@delete');
+    $router->patch('/{userId}/restore', 'UserController@restore');
 });

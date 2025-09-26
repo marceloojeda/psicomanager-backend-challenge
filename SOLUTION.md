@@ -497,13 +497,192 @@ public function delete($userId)
 
 ---
 
-## Problema 8: Implementar Soft Delete (A ser implementado)
+## Problema 8: Implementar Soft Delete 
 
-### Diagnóstico
-[A ser documentado]
+### DIAGNÓSTICO
 
-### Solução
-[A ser implementada]
+O endpoint `DELETE /users/{id}` estava realizando exclusão física (hard delete) dos usuários, o que resultava em:
+
+1. **Perda permanente de dados**: Impossibilidade de recuperar usuários excluídos
+2. **Perda de histórico**: Dados históricos e relacionamentos perdidos para sempre
+3. **Problemas de auditoria**: Falta de rastro sobre exclusões realizadas
+4. **Inflexibilidade**: Impossibilidade de reverter exclusões acidentais
+5. **Problemas de compliance**: Violação de regulamentações sobre retenção de dados
+
+### SOLUÇÃO IMPLEMENTADA
+
+**1. Migration para Soft Delete**
+```php
+// Migration: 2025_09_25_220350_add_deleted_at_to_users_table.php
+public function up()
+{
+    Schema::table('users', function (Blueprint $table) {
+        $table->softDeletes(); // Adiciona coluna deleted_at
+    });
+}
+```
+
+**2. Modelo User atualizado**
+```php
+// app/Models/User.php
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class User extends Model implements AuthenticatableContract, AuthorizableContract
+{
+    use Authenticatable, Authorizable, HasFactory, SoftDeletes;
+    
+    protected $dates = ['deleted_at'];
+}
+```
+
+**3. Relacionamento Task atualizado**
+```php
+// app/Models/Task.php
+public function user()
+{
+    return $this->belongsTo(User::class)->withTrashed();
+}
+```
+
+**4. Controller com Soft Delete**
+```php
+// app/Http/Controllers/UserController.php
+public function delete($userId)
+{
+    if (!is_numeric($userId) || $userId <= 0) {
+        return response()->json([
+            'error' => 'ID do usuário inválido.',
+            'message' => 'O ID deve ser um número inteiro positivo.'
+        ], 400);
+    }
+
+    $user = User::find($userId);
+    if (!$user) {
+        return response()->json([
+            'error' => 'Usuário não encontrado.',
+            'message' => "Usuário com ID {$userId} não existe."
+        ], 404);
+    }
+
+    // Verificar quantas tarefas serão preservadas
+    $tasksCount = Task::where('user_id', $userId)->count();
+    
+    // Soft delete do usuário
+    $deletedAt = now();
+    $user->delete();
+
+    return response()->json([
+        'message' => 'Usuário excluído com sucesso (soft delete).',
+        'user_id' => $userId,
+        'deleted_at' => $deletedAt->toISOString(),
+        'tasks_preserved' => "Foram preservadas {$tasksCount} tarefas associadas."
+    ], 200);
+}
+```
+
+### MELHORIAS IMPLEMENTADAS
+
+**Funcionalidades do Soft Delete:**
+- ✅ **Preservação de Dados**: Usuários "excluídos" permanecem no banco
+- ✅ **Marcação Temporal**: Campo `deleted_at` registra quando foi excluído
+- ✅ **Integridade Referencial**: Tarefas mantêm referência ao usuário
+- ✅ **Recuperação Possível**: Usuários podem ser restaurados se necessário
+- ✅ **Histórico Completo**: Dados permanecem para auditoria e relatórios
+
+**Benefícios Técnicos:**
+- ✅ **Queries Automáticas**: Eloquent ignora registros soft deleted por padrão
+- ✅ **Relacionamentos Preservados**: `withTrashed()` permite acesso a dados relacionados
+- ✅ **Reversibilidade**: Operação de exclusão pode ser desfeita
+- ✅ **Compliance**: Atende regulamentações sobre retenção de dados
+
+**5. Endpoint de Restore (PATCH /users/{id}/restore)**
+```php
+// app/Http/Controllers/UserController.php
+public function restore($userId)
+{
+    // Validação de ID
+    if (!is_numeric($userId) || $userId <= 0) {
+        return response()->json([
+            'error' => 'ID do usuário inválido.',
+            'message' => 'O ID deve ser um número inteiro positivo.'
+        ], 400);
+    }
+
+    // Buscar apenas usuários soft deleted
+    $user = User::onlyTrashed()->where('id', $userId)->first();
+    
+    if (!$user) {
+        // Verificar se usuário existe mas não foi soft deleted
+        $activeUser = User::find($userId);
+        if ($activeUser) {
+            return response()->json([
+                'error' => 'Usuário não foi excluído.',
+                'message' => "Usuário com ID {$userId} está ativo e não precisa ser restaurado."
+            ], 409); // Conflict
+        }
+        
+        return response()->json([
+            'error' => 'Usuário não encontrado.',
+            'message' => "Usuário com ID {$userId} não existe ou não foi soft deleted."
+        ], 404);
+    }
+
+    // Contar tarefas associadas
+    $tasksCount = Task::where('user_id', $userId)->count();
+    
+    // Restaurar o usuário
+    $user->restore();
+
+    return response()->json([
+        'message' => 'Usuário restaurado com sucesso.',
+        'user_id' => $userId,
+        'restored_at' => Carbon::now()->toISOString(),
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ],
+        'tasks_associated' => $tasksCount > 0 ? "Usuário possui {$tasksCount} tarefas associadas." : 'Nenhuma tarefa associada.'
+    ], 200);
+}
+```
+
+### FUNCIONALIDADES DO SOFT DELETE COM RESTORE
+
+**Endpoints implementados:**
+- ✅ `DELETE /users/{id}`: Soft delete de usuários
+- ✅ `PATCH /users/{id}/restore`: Restauração de usuários soft deleted
+
+**Validações do Restore:**
+- ✅ **ID válido**: Verifica se o ID é numérico e positivo
+- ✅ **Usuário soft deleted**: Busca apenas entre registros com deleted_at
+- ✅ **Usuário ativo**: Detecta tentativa de restaurar usuário não excluído (409 Conflict)
+- ✅ **Usuário inexistente**: Retorna 404 para IDs que não existem
+- ✅ **Informações detalhadas**: Mostra dados do usuário e contagem de tarefas
+
+**Resposta da API de Restore:**
+```json
+{
+  "message": "Usuário restaurado com sucesso.",
+  "user_id": "65",
+  "restored_at": "2025-09-26T13:01:31.900827Z",
+  "user": {
+    "id": 65,
+    "name": "Darrion Homenick", 
+    "email": "tfeeney@example.net"
+  },
+  "tasks_associated": "Nenhuma tarefa associada."
+}
+```
+
+### IMPACTO DA SOLUÇÃO
+
+- ✅ **Segurança de Dados**: Nenhuma perda permanente de informações
+- ✅ **Auditoria Completa**: Histórico de exclusões preservado
+- ✅ **Flexibilidade**: Possibilidade de restaurar usuários
+- ✅ **Performance**: Consultas eficientes com índices em deleted_at
+- ✅ **Manutenibilidade**: Código limpo usando recursos nativos do Laravel
+- ✅ **Compliance**: Atende requisitos de retenção de dados corporativos
 
 ---
 
@@ -526,18 +705,3 @@ public function delete($userId)
 [A ser implementada]
 
 ---
-
-## Resumo do Progresso
-
-| Problema | Status | Testes |
-|----------|--------|--------|
-| 1. Filtros GET /users + Paginação | ✅ Concluído | ✅ 16 testes |
-| 2. Senha exposta | ✅ Concluído | ✅ Incluído |
-| 3. Endpoint usuário específico + Validação | ✅ Concluído | ✅ Incluído |
-| 4. Criptografia de senha + Validação | ✅ Concluído | ✅ 13 testes |
-| 5. Performance tasks | ✅ Concluído | ✅ 11 testes |
-| 6. Emails duplicados | ✅ Resolvido no Problema 4 | ✅ Incluído |
-| 7. Delete com tarefas | ⏳ Pendente | - |
-| 8. Soft delete | ⏳ Pendente | - |
-| 9. Logs centralizados | ⏳ Pendente | - |
-| 10. Documentação API | ⏳ Pendente | - |

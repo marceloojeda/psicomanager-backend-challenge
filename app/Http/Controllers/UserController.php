@@ -8,6 +8,7 @@ use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
@@ -99,22 +100,17 @@ class UserController extends Controller
         try {
             $user = User::where('id', $userId)->firstOrFail();
             
-            // Verificar se o usuário possui tarefas associadas
+            // Com soft delete, não precisamos verificar tarefas associadas
+            // O usuário será marcado como excluído, mantendo a integridade referencial
             $tasksCount = Task::where('user_id', $userId)->count();
             
-            if ($tasksCount > 0) {
-                return response()->json([
-                    'error' => 'Não é possível excluir o usuário.',
-                    'message' => "O usuário possui {$tasksCount} tarefas associadas. Exclua ou reatribua as tarefas primeiro.",
-                    'tasks_count' => $tasksCount
-                ], 409); // Conflict - violação de integridade referencial
-            }
-
-            $user->delete();
+            $user->delete(); // Soft delete - apenas marca deleted_at
 
             return response()->json([
-                'message' => 'Usuário excluído com sucesso.',
-                'user_id' => $userId
+                'message' => 'Usuário excluído com sucesso (soft delete).',
+                'user_id' => $userId,
+                'deleted_at' => $user->deleted_at,
+                'tasks_preserved' => $tasksCount > 0 ? "Foram preservadas {$tasksCount} tarefas associadas." : 'Nenhuma tarefa associada.'
             ], 200);
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -126,6 +122,65 @@ class UserController extends Controller
             return response()->json([
                 'error' => 'Erro interno do servidor.',
                 'message' => 'Falha ao excluir o usuário.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Restore a soft deleted user
+     */
+    public function restore($userId)
+    {
+        try {
+            // Validar ID do usuário
+            if (!is_numeric($userId) || $userId <= 0) {
+                return response()->json([
+                    'error' => 'ID do usuário inválido.',
+                    'message' => 'O ID deve ser um número inteiro positivo.'
+                ], 400);
+            }
+
+            // Buscar usuário apenas entre os soft deleted
+            $user = User::onlyTrashed()->where('id', $userId)->first();
+            
+            if (!$user) {
+                // Verificar se o usuário existe e não foi soft deleted
+                $activeUser = User::find($userId);
+                if ($activeUser) {
+                    return response()->json([
+                        'error' => 'Usuário não foi excluído.',
+                        'message' => "Usuário com ID {$userId} está ativo e não precisa ser restaurado."
+                    ], 409); // Conflict
+                }
+                
+                return response()->json([
+                    'error' => 'Usuário não encontrado.',
+                    'message' => "Usuário com ID {$userId} não existe ou não foi soft deleted."
+                ], 404);
+            }
+
+            // Contar tarefas associadas para informar o usuário
+            $tasksCount = Task::where('user_id', $userId)->count();
+            
+            // Restaurar o usuário (remove o deleted_at)
+            $user->restore();
+
+            return response()->json([
+                'message' => 'Usuário restaurado com sucesso.',
+                'user_id' => $userId,
+                'restored_at' => Carbon::now()->toISOString(),
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'tasks_associated' => $tasksCount > 0 ? "Usuário possui {$tasksCount} tarefas associadas." : 'Nenhuma tarefa associada.'
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erro interno do servidor.',
+                'message' => 'Falha ao restaurar o usuário.'
             ], 500);
         }
     }
