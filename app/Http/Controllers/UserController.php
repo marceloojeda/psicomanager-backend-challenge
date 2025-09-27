@@ -167,14 +167,14 @@ class UserController extends Controller
     {
         // Validação do ID - deve ser numérico e positivo
         if (!is_numeric($userId) || $userId <= 0) {
-            return [
+            return response()->json([
                 'error' => 'ID inválido. O ID deve ser um número positivo.'
-            ];
+            ], 400);
         }
 
         try {
             $user = User::where('id', $userId)->firstOrFail();
-            return [
+            return response()->json([
                 'data' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -182,12 +182,12 @@ class UserController extends Controller
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
                 ]
-            ];
+            ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
+            return response()->json([
                 'error' => 'Usuário não encontrado.',
                 'message' => "Usuário com ID {$userId} não existe."
-            ];
+            ], 404);
         }
     }
     
@@ -239,10 +239,10 @@ class UserController extends Controller
 
         // Retorna erro de validação se houver
         if ($validator->fails()) {
-            return [
+            return response()->json([
                 'error' => 'Dados inválidos',
                 'validation_errors' => $validator->errors()
-            ];
+            ], 422);
         }
 
         // Cria o usuário com senha criptografada
@@ -261,7 +261,7 @@ class UserController extends Controller
             ]);
 
             // Retorna usando dados estruturados para não expor campos sensíveis
-            return [
+            return response()->json([
                 'data' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -270,7 +270,7 @@ class UserController extends Controller
                     'updated_at' => $user->updated_at,
                 ],
                 'message' => 'Usuário criado com sucesso'
-            ];
+            ], 201);
             
         } catch (\Exception $e) {
             // Log error
@@ -278,10 +278,10 @@ class UserController extends Controller
                 'attempted_data' => $request->only(['name', 'email'])
             ]);
             
-            return [
+            return response()->json([
                 'error' => 'Erro interno do servidor.',
                 'message' => 'Falha ao criar usuário.'
-            ];
+            ], 500);
         }
     }
 

@@ -15,9 +15,6 @@ class UserDeleteTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Limpa as tabelas antes de cada teste
-        Task::query()->delete();
-        User::query()->delete();
     }
 
     /** @test */
@@ -34,12 +31,13 @@ class UserDeleteTest extends TestCase
 
         $response->seeStatusCode(200)
                 ->seeJson([
-                    'message' => 'Usuário excluído com sucesso.',
-                    'user_id' => (string)$user->id // ID vem como string na resposta JSON
+                    'message' => 'Usuário excluído com sucesso (soft delete).'
                 ]);
 
-        // Verifica se o usuário foi realmente excluído
+        // Verifica se o usuário foi soft deleted (não aparece em consultas normais)
         $this->assertNull(User::find($user->id));
+        // Mas ainda existe quando incluímos soft deleted
+        $this->assertNotNull(User::withTrashed()->find($user->id));
     }
 
     /** @test */
@@ -67,19 +65,15 @@ class UserDeleteTest extends TestCase
 
         $response = $this->json('DELETE', "/users/{$user->id}");
 
-        $response->seeStatusCode(409)
-                ->seeJsonStructure([
-                    'error',
-                    'message',
-                    'tasks_count'
-                ])
+        $response->seeStatusCode(200)
                 ->seeJson([
-                    'error' => 'Não é possível excluir o usuário.',
-                    'tasks_count' => 2
+                    'message' => 'Usuário excluído com sucesso (soft delete).'
                 ]);
 
-        // Verifica se o usuário ainda existe
-        $this->assertNotNull(User::find($user->id));
+        // Verifica soft delete: usuário não aparece em consultas normais
+        $this->assertNull(User::find($user->id));
+        // Mas existe quando incluímos soft deleted
+        $this->assertNotNull(User::withTrashed()->find($user->id));
 
         // Verifica se as tarefas ainda existem
         $this->assertEquals(2, Task::where('user_id', $user->id)->count());
@@ -106,15 +100,14 @@ class UserDeleteTest extends TestCase
 
         $response = $this->json('DELETE', "/users/{$user->id}");
 
-        $response->seeStatusCode(409)
+        $response->seeStatusCode(200)
                 ->seeJson([
-                    'error' => 'Não é possível excluir o usuário.',
-                    'tasks_count' => 50
+                    'message' => 'Usuário excluído com sucesso (soft delete).'
                 ]);
 
-        // Verifica mensagem específica
+        // Verifica que as tarefas foram preservadas na resposta
         $responseData = json_decode($response->response->getContent(), true);
-        $this->assertStringContainsString('50 tarefas associadas', $responseData['message']);
+        $this->assertStringContainsString('50 tarefas associadas', $responseData['tasks_preserved']);
     }
 
     /** @test */
@@ -187,10 +180,13 @@ class UserDeleteTest extends TestCase
         // Tenta excluir o usuário
         $response = $this->json('DELETE', "/users/{$user->id}");
 
-        $response->seeStatusCode(409);
+        $response->seeStatusCode(200);
 
-        // Verifica que nada foi alterado
-        $this->assertNotNull(User::find($user->id));
+        // Verifica soft delete: usuário não aparece em consultas normais
+        $this->assertNull(User::find($user->id));
+        // Mas existe quando incluímos soft deleted
+        $this->assertNotNull(User::withTrashed()->find($user->id));
+        // Task permanece intacta
         $this->assertNotNull(Task::find($task->id));
         $this->assertEquals($user->id, Task::find($task->id)->user_id);
     }

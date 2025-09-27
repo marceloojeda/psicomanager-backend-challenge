@@ -12,8 +12,6 @@ class LoggingTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        // Clean up test users
-        User::where('email', 'LIKE', '%logging-test%')->forceDelete();
     }
 
     /**
@@ -21,9 +19,10 @@ class LoggingTest extends TestCase
      */
     public function test_user_creation_logged()
     {
+        $uniqueEmail = 'logging-test' . time() . '@example.com';
         $userData = [
             'name' => 'Logging Test User',
-            'email' => 'logging-test@example.com',
+            'email' => $uniqueEmail,
             'password' => 'password123'
         ];
 
@@ -116,9 +115,10 @@ class LoggingTest extends TestCase
     public function test_log_structure()
     {
         // Create user to generate a log entry
+        $uniqueEmail = 'logging-test-structure' . time() . '@example.com';
         $userData = [
             'name' => 'Structure Test User',
-            'email' => 'logging-test-structure@example.com',
+            'email' => $uniqueEmail,
             'password' => 'password123'
         ];
 

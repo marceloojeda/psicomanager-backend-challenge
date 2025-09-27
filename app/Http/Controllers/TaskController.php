@@ -3,19 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Services\TaskCacheService;
 use App\Traits\LogsOperations;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
     use LogsOperations;
+    
+    protected TaskCacheService $cacheService;
+    
     /**
      * Create a new controller instance.
-     *
-     * @return void
      */
-    public function __construct()
+    public function __construct(TaskCacheService $cacheService)
     {
+        $this->cacheService = $cacheService;
     }
 
     /**
@@ -70,9 +74,11 @@ class TaskController extends Controller
      */
     function index(Request $request)
     {
-        $query = Task::query();
+        // Validação dos parâmetros
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = min(max(1, (int) $request->get('per_page', 50)), 200);
 
-        // Filtro por user_id com otimização
+        // Filtro por user_id com cache otimizado
         if ($request->has('user_id')) {
             $userId = $request->input('user_id');
             
@@ -86,26 +92,52 @@ class TaskController extends Controller
             // Log task query by user
             $this->logOperation('tasks_queried_by_user', [
                 'user_id' => $userId,
-                'per_page' => min($request->get('per_page', 50), 200)
+                'page' => $page,
+                'per_page' => $perPage,
+                'cache_enabled' => true
             ]);
 
-            $query->where('user_id', $userId);
+            // Usar cache para consultas por usuário (mais comuns)
+            try {
+                $cachedResult = $this->cacheService->getTasksByUserId((int) $userId, $page, $perPage);
+                
+                // Transformar dados para manter compatibilidade com formato anterior
+                return response()->json([
+                    'data' => $this->transformTasksData($cachedResult['data']),
+                    'current_page' => $cachedResult['pagination']['current_page'],
+                    'per_page' => $cachedResult['pagination']['per_page'],
+                    'total' => $cachedResult['pagination']['total'],
+                    'last_page' => $cachedResult['pagination']['last_page'],
+                    'cached_at' => $cachedResult['cached_at']
+                ], 200);
+            } catch (\Exception $e) {
+                // Fallback sem cache em caso de erro
+                Log::warning('Erro no cache, usando consulta direta', [
+                    'error' => $e->getMessage(),
+                    'user_id' => $userId
+                ]);
+                return $this->getTasksWithoutCache($userId, $page, $perPage);
+            }
         }
 
-        // Paginação para performance
-        $perPage = min($request->get('per_page', 50), 200); // Máximo 200 por página
-        
-        // Ordenação padrão por ID para consistência na paginação
-        $query->orderBy('id', 'desc');
-
-        // Usar paginação sempre para grandes volumes
-        if ($request->has('user_id') || $request->has('page') || $request->has('per_page')) {
-            $results = $query->paginate($perPage);
-            return response()->json($results);
-        } else {
-            // Para consultas gerais sem filtro, limitar a 100 registros
-            $results = $query->limit(100)->get();
-            return response()->json($results);
+        // Para consultas gerais, usar cache também
+        try {
+            $cachedResult = $this->cacheService->getAllTasks($page, $perPage);
+            
+            return response()->json([
+                'data' => $this->transformTasksData($cachedResult['data']),
+                'current_page' => $cachedResult['pagination']['current_page'],
+                'per_page' => $cachedResult['pagination']['per_page'],
+                'total' => $cachedResult['pagination']['total'],
+                'last_page' => $cachedResult['pagination']['last_page'],
+                'cached_at' => $cachedResult['cached_at']
+            ], 200);
+        } catch (\Exception $e) {
+            // Fallback sem cache
+            Log::warning('Erro no cache geral, usando consulta direta', [
+                'error' => $e->getMessage()
+            ]);
+            return $this->getAllTasksWithoutCache($page, $perPage);
         }
     }
 
@@ -149,13 +181,155 @@ class TaskController extends Controller
         }
 
         try {
-            $task = Task::where('id', $taskId)->firstOrFail();
-            return response()->json($task);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Usar cache para busca individual
+            $cachedResult = $this->cacheService->getTaskById((int) $taskId);
+            
+            if (!$cachedResult) {
+                return response()->json([
+                    'error' => 'Tarefa não encontrada.',
+                    'message' => "Tarefa com ID {$taskId} não existe."
+                ], 404);
+            }
+
             return response()->json([
-                'error' => 'Tarefa não encontrada.',
-                'message' => "Tarefa com ID {$taskId} não existe."
-            ], 404);
+                'data' => $this->transformTaskData($cachedResult['data']),
+                'cached_at' => $cachedResult['cached_at']
+            ], 200);
+
+        } catch (\Exception $e) {
+            // Fallback sem cache
+            Log::warning('Erro no cache individual, usando consulta direta', [
+                'error' => $e->getMessage(),
+                'task_id' => $taskId
+            ]);
+
+            try {
+                $task = Task::with('user')->where('id', $taskId)->firstOrFail();
+                return response()->json(['data' => $this->transformTaskData($task)], 200);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                return response()->json([
+                    'error' => 'Tarefa não encontrada.',
+                    'message' => "Tarefa com ID {$taskId} não existe."
+                ], 404);
+            }
         }
+    }
+
+    /**
+     * Transforma array de tasks para formato consistente
+     */
+    private function transformTasksData($tasks): array
+    {
+        if (empty($tasks)) {
+            return [];
+        }
+
+        return array_map([$this, 'transformTaskData'], $tasks);
+    }
+
+    /**
+     * Transforma uma task individual para formato consistente
+     */
+    private function transformTaskData($task): array
+    {
+        // Se for um modelo Eloquent, converter para array
+        if (is_object($task) && method_exists($task, 'toArray')) {
+            $taskArray = $task->toArray();
+        } else {
+            $taskArray = (array) $task;
+        }
+
+        return [
+            'id' => $taskArray['id'],
+            'description' => $taskArray['description'],
+            'status' => $taskArray['status'],
+            'user_id' => $taskArray['user_id'],
+            'created_at' => $taskArray['created_at'],
+            'updated_at' => $taskArray['updated_at'],
+            'user' => isset($taskArray['user']) ? [
+                'id' => $taskArray['user']['id'],
+                'name' => $taskArray['user']['name'],
+                'email' => $taskArray['user']['email'],
+                'created_at' => $taskArray['user']['created_at'],
+                'updated_at' => $taskArray['user']['updated_at']
+            ] : null
+        ];
+    }
+
+    /**
+     * Fallback para consultas por usuário sem cache
+     */
+    private function getTasksWithoutCache(int $userId, int $page, int $perPage): array
+    {
+        $query = Task::with('user')->where('user_id', $userId);
+        $tasks = $query->orderBy('id', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+        return [
+            'data' => $this->transformTasksData($tasks->items()),
+            'current_page' => $tasks->currentPage(),
+            'per_page' => $tasks->perPage(),
+            'total' => $tasks->total(),
+            'last_page' => $tasks->lastPage(),
+            'cache_status' => 'disabled'
+        ];
+    }
+
+    /**
+     * Fallback para consultas gerais sem cache
+     */
+    private function getAllTasksWithoutCache(int $page, int $perPage): array
+    {
+        $query = Task::with('user');
+        $tasks = $query->orderBy('id', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+        return [
+            'data' => $this->transformTasksData($tasks->items()),
+            'current_page' => $tasks->currentPage(),
+            'per_page' => $tasks->perPage(),
+            'total' => $tasks->total(),
+            'last_page' => $tasks->lastPage(),
+            'cache_status' => 'disabled'
+        ];
+    }
+
+    /**
+     * Endpoint para limpar cache (para admins)
+     * GET /tasks/cache/clear
+     */
+    public function clearCache(): array
+    {
+        try {
+            $this->cacheService->clearAllTasksCache();
+            
+            return [
+                'message' => 'Cache de tarefas limpo com sucesso',
+                'cleared_at' => now()->toISOString()
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erro ao limpar cache: ' . $e->getMessage());
+            
+            return [
+                'error' => 'Erro ao limpar cache',
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Endpoint para estatísticas do cache
+     * GET /tasks/cache/stats
+     */
+    public function cacheStats(): array
+    {
+        return $this->cacheService->getCacheStats();
+    }
+
+    /**
+     * Endpoint para aquecer o cache
+     * POST /tasks/cache/warm
+     */
+    public function warmCache(): array
+    {
+        return $this->cacheService->warmCache();
     }
 }

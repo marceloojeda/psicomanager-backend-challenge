@@ -162,10 +162,11 @@ class UserSoftDeleteTest extends TestCase
         $users = json_decode($response->response->getContent(), true);
         
         // Should have same count as before (soft deleted user not included)
-        $this->assertEquals($initialCount, count($users['data']));
+        // Users are returned directly when no pagination is used
+        $this->assertEquals($initialCount, count($users));
 
         // Verify the soft deleted user is not in the results
-        $userIds = array_column($users['data'], 'id');
+        $userIds = array_column($users, 'id');
         $this->assertNotContains($user->id, $userIds);
     }
 

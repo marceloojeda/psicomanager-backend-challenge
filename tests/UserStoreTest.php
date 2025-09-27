@@ -14,16 +14,15 @@ class UserStoreTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Limpa a tabela antes de cada teste
-        User::query()->delete();
     }
 
     /** @test */
     public function test_can_create_user_with_valid_data()
     {
+        $uniqueEmail = 'joao' . time() . '@example.com';
         $userData = [
             'name' => 'João Silva',
-            'email' => 'joao@example.com',
+            'email' => $uniqueEmail,
             'password' => 'password123'
         ];
 
@@ -31,27 +30,34 @@ class UserStoreTest extends TestCase
 
         $response->seeStatusCode(201)
                 ->seeJsonStructure([
-                    'id',
-                    'name',
-                    'email',
-                    'created_at',
-                    'updated_at'
+                    'data' => [
+                        'id',
+                        'name', 
+                        'email',
+                        'created_at',
+                        'updated_at'
+                    ],
+                    'message'
                 ])
-                ->seeJson([
-                    'name' => 'João Silva',
-                    'email' => 'joao@example.com'
+                ->seeJsonContains([
+                    'message' => 'Usuário criado com sucesso'
                 ])
                 ->dontSeeJson(['password']) // Não deve retornar senha
                 ->dontSeeJson(['remember_token']); // Não deve retornar token
 
+        // Verificar estrutura de dados manualmente
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('João Silva', $responseData['data']['name']);
+        $this->assertEquals($uniqueEmail, $responseData['data']['email']);
+
         // Verifica se o usuário foi criado no banco
         $this->seeInDatabase('users', [
             'name' => 'João Silva',
-            'email' => 'joao@example.com'
+            'email' => $uniqueEmail
         ]);
 
         // Verifica se a senha foi criptografada
-        $user = User::where('email', 'joao@example.com')->first();
+        $user = User::where('email', $uniqueEmail)->first();
         $this->assertTrue(Hash::check('password123', $user->password));
     }
 
@@ -134,16 +140,18 @@ class UserStoreTest extends TestCase
     /** @test */
     public function test_validates_unique_email()
     {
+        $uniqueEmail = 'existente' . time() . '@example.com';
+        
         // Cria usuário existente
         User::create([
             'name' => 'Usuário Existente',
-            'email' => 'existente@example.com',
+            'email' => $uniqueEmail,
             'password' => Hash::make('password')
         ]);
 
         $userData = [
             'name' => 'João Silva',
-            'email' => 'existente@example.com',
+            'email' => $uniqueEmail,
             'password' => 'password123'
         ];
 
@@ -156,7 +164,7 @@ class UserStoreTest extends TestCase
                 ]);
 
         // Verifica que apenas um usuário com esse email existe
-        $this->assertEquals(1, User::where('email', 'existente@example.com')->count());
+        $this->assertEquals(1, User::where('email', $uniqueEmail)->count());
     }
 
     /** @test */
@@ -273,9 +281,10 @@ class UserStoreTest extends TestCase
     /** @test */
     public function test_ignores_extra_fields()
     {
+        $uniqueEmail = 'joao.extra' . time() . '@example.com';
         $userData = [
             'name' => 'João Silva',
-            'email' => 'joao@example.com',
+            'email' => $uniqueEmail,
             'password' => 'password123',
             'malicious_field' => 'should_be_ignored',
             'admin' => true
@@ -286,9 +295,9 @@ class UserStoreTest extends TestCase
         $response->seeStatusCode(201);
 
         // Verifica que apenas os campos permitidos foram salvos
-        $user = User::where('email', 'joao@example.com')->first();
+        $user = User::where('email', $uniqueEmail)->first();
         $this->assertEquals('João Silva', $user->name);
-        $this->assertEquals('joao@example.com', $user->email);
+        $this->assertEquals($uniqueEmail, $user->email);
         $this->assertTrue(Hash::check('password123', $user->password));
         
         // Verifica que campos extras não foram salvos (assumindo que não existem)

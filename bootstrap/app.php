@@ -27,6 +27,11 @@ $app->withFacades();
 
 $app->withEloquent();
 
+// Registrar manualmente o ResponseFactory para compatibilidade com Lumen
+$app->singleton('Illuminate\Contracts\Routing\ResponseFactory', function ($app) {
+    return new \Laravel\Lumen\Http\ResponseFactory();
+});
+
 /*
 |--------------------------------------------------------------------------
 | Register Container Bindings
@@ -60,6 +65,8 @@ $app->singleton(
 */
 
 $app->configure('app');
+$app->configure('database');
+$app->configure('cache');
 
 /*
 |--------------------------------------------------------------------------
@@ -95,6 +102,9 @@ $app->configure('app');
 // $app->register(App\Providers\AuthServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
 $app->register(App\Providers\LoggingServiceProvider::class);
+$app->register(App\Providers\CacheServiceProvider::class);
+$app->register(Illuminate\Redis\RedisServiceProvider::class);
+$app->register(Illuminate\Cache\CacheServiceProvider::class);
 // $app->register(L5Swagger\L5SwaggerServiceProvider::class); // Incompatível com Lumen
 
 /*

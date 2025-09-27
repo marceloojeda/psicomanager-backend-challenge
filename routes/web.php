@@ -28,6 +28,11 @@ $router->group(['prefix' => 'tasks'], function () use ($router) {
 
     $router->get('/', 'TaskController@index');
     $router->get('/{taskId}', 'TaskController@get');
+    
+    // Rotas de gerenciamento de cache
+    $router->post('/cache/clear', 'TaskController@clearCache');
+    $router->get('/cache/stats', 'TaskController@cacheStats');
+    $router->post('/cache/warm', 'TaskController@warmCache');
 });
 
 $router->group(['prefix' => 'users'], function () use ($router) {

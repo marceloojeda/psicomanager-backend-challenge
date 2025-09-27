@@ -15,9 +15,6 @@ class TaskControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Limpa as tabelas antes de cada teste
-        Task::query()->delete();
-        User::query()->delete();
     }
 
     /** @test */
