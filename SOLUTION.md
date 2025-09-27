@@ -1039,7 +1039,7 @@ interface User {
 ### FERRAMENTAS DE DOCUMENTAÇÃO
 
 **1. Swagger UI Interativo**
-- **URL**: http://localhost:8888/api-documentation.html
+- **URL**: http://localhost:8888/docs
 - **Funcionalidades**: Teste direto dos endpoints, visualização de schemas, exemplos interativos
 
 **2. Especificação OpenAPI**
@@ -1059,7 +1059,7 @@ interface User {
 ## 📚 Documentação da API
 
 ### Quick Links
-- **[📖 Documentação Interativa (Swagger UI)](http://localhost:8888/api-documentation.html)**
+- **[📖 Documentação Interativa (Swagger UI)](http://localhost:8888/docs)**
 - **[📋 Especificação OpenAPI](http://localhost:8888/api-docs-simple.json)**
 - **[🔧 Guia de Integração Frontend](docs/FRONTEND_INTEGRATION_GUIDE.md)**
 - **[📮 Coleção Postman](postman/PsicoManager-API.postman_collection.json)**
@@ -1304,5 +1304,189 @@ DELETE /tasks/cache/clear
 - ✅ **Horizontal scaling ready**: Redis clusterizável
 - ✅ **Memory efficient**: Serialização otimizada e TTL adequado
 - ✅ **Load distribution**: Reduz pressão no banco principal
+
+---
+
+## 🔧 PROBLEMA ADICIONAL RESOLVIDO: Erro de Conexão de Banco em Docker
+
+### PROBLEMA ENCONTRADO
+Durante os testes, a aplicação apresentou erro "Connection refused" ao conectar com MySQL:
+
+```
+SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select count(*)...)
+```
+
+**Causa:** A configuração `.env` usava `DB_HOST=127.0.0.1`, que funciona localmente mas falha em ambiente Docker.
+
+### SOLUÇÃO RÁPIDA
+Alteração simples no arquivo `.env`:
+
+```env
+# ❌ Antes (não funciona em Docker)
+DB_HOST=127.0.0.1
+
+# ✅ Depois (funciona em Docker)
+DB_HOST=mysql
+```
+
+**Por quê funciona:**
+- `127.0.0.1`: Busca MySQL dentro do próprio container PHP (não existe)
+- `mysql`: Busca pelo container MySQL na rede Docker (correto)
+
+### RESULTADO
+- ✅ Conexão de banco restaurada
+- ✅ APIs funcionando normalmente
+- ✅ Validações e operações do banco operacionais
+
+---
+
+## Sistema de Autenticação JWT
+
+### Descrição da Implementação
+Sistema completo de autenticação baseado em JWT (JSON Web Tokens) implementado para garantir segurança e autorização nas rotas da API.
+
+### Componentes Implementados
+
+#### 1. **JWTService** - Serviço Core de JWT
+```php
+class JWTService
+{
+    public function generateToken(User $user): string
+    public function validateToken(string $token): ?object
+    public function refreshToken(string $refreshToken): array
+    public function isTokenExpiring(object $payload): bool
+    public function getTokenTimeToExpire(object $payload): int
+}
+```
+
+**Funcionalidades:**
+- ✅ **Geração de tokens**: Access token (1h) e Refresh token (30 dias)
+- ✅ **Validação robusta**: Verificação de assinatura, expiração e estrutura
+- ✅ **Refresh automático**: Sistema de renovação de tokens
+- ✅ **Configuração flexível**: TTLs configuráveis via `.env`
+
+#### 2. **AuthController** - Endpoints de Autenticação
+```php
+POST /auth/login     - Login com email/password
+POST /auth/refresh   - Renovar tokens
+POST /auth/logout    - Logout (invalidar token)
+GET  /auth/me        - Dados do usuário autenticado
+```
+
+**Recursos implementados:**
+- ✅ **Login seguro**: Validação de credenciais com hash bcrypt
+- ✅ **Tokens dual**: Access + Refresh token pattern
+- ✅ **Dados do usuário**: Endpoint protegido para perfil
+- ✅ **Logout funcional**: Invalidação de sessão
+
+#### 3. **JWTAuthMiddleware** - Proteção de Rotas
+```php
+class JWTAuthMiddleware
+{
+    public function handle(Request $request, Closure $next)
+    {
+        // Extração e validação do token Bearer
+        // Resolução do usuário autenticado
+        // Injeção no contexto da requisição
+    }
+}
+```
+
+**Funcionalidades de segurança:**
+- ✅ **Validação automática**: Bearer token em rotas protegidas  
+- ✅ **Injeção de contexto**: Usuário disponível em `$request->attributes`
+- ✅ **Tratamento de erros**: Responses padronizados para falhas de auth
+- ✅ **Headers CORS**: Suporte a requisições cross-origin
+
+### Configuração de Segurança
+
+#### Variáveis de Ambiente
+```env
+JWT_SECRET=sua_chave_secreta_super_forte
+JWT_EXPIRATION=3600        # 1 hora
+JWT_REFRESH_EXPIRATION=2592000  # 30 dias
+JWT_ISSUER=http://localhost:8888
+JWT_AUDIENCE=psicomanager-api
+```
+
+#### Middleware Registration
+```php
+// bootstrap/app.php
+$app->routeMiddleware([
+    'jwt.auth' => App\Http\Middleware\JWTAuthMiddleware::class,
+]);
+```
+
+#### Rotas Protegidas
+```php
+// routes/web.php
+$router->group(['middleware' => 'jwt.auth'], function () use ($router) {
+    $router->get('/tasks', 'TaskController@index');
+    $router->get('/tasks/{taskId}', 'TaskController@get');
+    $router->post('/auth/logout', 'AuthController@logout');
+    $router->get('/auth/me', 'AuthController@me');
+});
+```
+
+### Fluxo de Autenticação
+
+#### 1. **Login**
+```bash
+POST /auth/login
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJ0eXAiOiJKV1Q...",
+  "refresh_token": "eyJ0eXAiOiJKV1Q...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "user": {
+    "id": 1,
+    "name": "User Name",
+    "email": "user@example.com"
+  }
+}
+```
+
+#### 2. **Acesso a Rotas Protegidas**
+```bash
+GET /tasks
+Authorization: Bearer eyJ0eXAiOiJKV1Q...
+```
+
+#### 3. **Refresh Token**
+```bash
+POST /auth/refresh
+{
+  "refresh_token": "eyJ0eXAiOiJKV1Q..."
+}
+```
+
+#### Schema de Segurança
+```yaml
+securitySchemes:
+  bearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+    description: "Token JWT para autenticação. Use o formato: Bearer {token}"
+```
+
+#### Anotações em Rotas Protegidas
+```php
+/**
+ * @OA\Get(
+ *     path="/tasks",
+ *     security={{"bearerAuth":{}}},
+ *     ...
+ * )
+ */
+```
 
 ---

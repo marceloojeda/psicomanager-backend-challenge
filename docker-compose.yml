@@ -21,6 +21,13 @@ services:
     volumes:
       - ./:/var/www/html
     working_dir: /var/www/html
+    environment:
+      # JWT Configuration
+      - JWT_SECRET=psicomanager_super_secret_key
+      - JWT_EXPIRATION=3600
+      - JWT_REFRESH_EXPIRATION=2592000
+      - JWT_ISSUER=http://localhost:8888
+      - JWT_AUDIENCE=psicomanager-api
     depends_on:
       - mysql
     networks:

@@ -1,17 +1,12 @@
 <?php
 
-use Laravel\Lumen\Testing\TestCase;
+use Tests\TestCase;
 use App\Models\User;
 use App\Models\Task;
 use Illuminate\Support\Facades\Hash;
 
 class UserDeleteTest extends TestCase
 {
-    public function createApplication()
-    {
-        return require __DIR__ . '/../bootstrap/app.php';
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -27,12 +22,12 @@ class UserDeleteTest extends TestCase
             'password' => Hash::make('password123')
         ]);
 
-        $response = $this->json('DELETE', "/users/{$user->id}");
+        $response = $this->authenticatedDelete("/users/{$user->id}");
 
-        $response->seeStatusCode(200)
-                ->seeJson([
-                    'message' => 'Usuário excluído com sucesso (soft delete).'
-                ]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário excluído com sucesso (soft delete).', $responseData['message']);
 
         // Verifica se o usuário foi soft deleted (não aparece em consultas normais)
         $this->assertNull(User::find($user->id));
@@ -63,12 +58,12 @@ class UserDeleteTest extends TestCase
             'status' => 'em progresso'
         ]);
 
-        $response = $this->json('DELETE', "/users/{$user->id}");
+        $response = $this->authenticatedDelete("/users/{$user->id}");
 
-        $response->seeStatusCode(200)
-                ->seeJson([
-                    'message' => 'Usuário excluído com sucesso (soft delete).'
-                ]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário excluído com sucesso (soft delete).', $responseData['message']);
 
         // Verifica soft delete: usuário não aparece em consultas normais
         $this->assertNull(User::find($user->id));
@@ -98,66 +93,59 @@ class UserDeleteTest extends TestCase
             ]);
         }
 
-        $response = $this->json('DELETE', "/users/{$user->id}");
+        $response = $this->authenticatedDelete("/users/{$user->id}");
 
-        $response->seeStatusCode(200)
-                ->seeJson([
-                    'message' => 'Usuário excluído com sucesso (soft delete).'
-                ]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário excluído com sucesso (soft delete).', $responseData['message']);
 
         // Verifica que as tarefas foram preservadas na resposta
-        $responseData = json_decode($response->response->getContent(), true);
         $this->assertStringContainsString('50 tarefas associadas', $responseData['tasks_preserved']);
     }
 
     /** @test */
     public function test_delete_user_validates_invalid_id()
     {
-        $response = $this->json('DELETE', '/users/abc');
+        $response = $this->authenticatedDelete('/users/abc');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'ID inválido. O ID deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID inválido. O ID deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
     public function test_delete_user_validates_negative_id()
     {
-        $response = $this->json('DELETE', '/users/-1');
+        $response = $this->authenticatedDelete('/users/-1');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'ID inválido. O ID deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID inválido. O ID deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
     public function test_delete_user_validates_zero_id()
     {
-        $response = $this->json('DELETE', '/users/0');
+        $response = $this->authenticatedDelete('/users/0');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'ID inválido. O ID deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID inválido. O ID deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
     public function test_delete_user_not_found()
     {
-        $response = $this->json('DELETE', '/users/99999');
+        $response = $this->authenticatedDelete('/users/99999');
 
-        $response->seeStatusCode(404)
-                ->seeJsonStructure([
-                    'error',
-                    'message'
-                ])
-                ->seeJson([
-                    'error' => 'Usuário não encontrado.'
-                ]);
-
+        $this->assertEquals(404, $response->response->getStatusCode());
+        
         $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário não encontrado.', $responseData['error']);
         $this->assertStringContainsString('99999', $responseData['message']);
     }
 
@@ -178,9 +166,9 @@ class UserDeleteTest extends TestCase
         ]);
 
         // Tenta excluir o usuário
-        $response = $this->json('DELETE', "/users/{$user->id}");
+        $response = $this->authenticatedDelete("/users/{$user->id}");
 
-        $response->seeStatusCode(200);
+        $this->assertEquals(200, $response->response->getStatusCode());
 
         // Verifica soft delete: usuário não aparece em consultas normais
         $this->assertNull(User::find($user->id));

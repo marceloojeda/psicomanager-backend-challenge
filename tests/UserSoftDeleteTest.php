@@ -34,12 +34,18 @@ class UserSoftDeleteTest extends TestCase
         $this->assertTrue(User::where('id', $user->id)->exists());
 
         // Delete user via API
-        $response = $this->delete("/users/{$user->id}");
+        $response = $this->authenticatedDelete("/users/{$user->id}");
 
         // Check response
-        $response->seeStatusCode(200)
-                 ->seeJsonContains(['message' => 'Usuário excluído com sucesso (soft delete).'])
-                 ->seeJsonContains(['user_id' => (string)$user->id]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário excluído com sucesso (soft delete).', $responseData['message']);
+        $this->assertEquals((string)$user->id, $responseData['user_id']);
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário excluído com sucesso (soft delete).', $responseData['message']);
+        $this->assertEquals((string)$user->id, $responseData['user_id']);
 
         // User should not appear in normal queries (soft deleted)
         $this->assertFalse(User::where('id', $user->id)->exists());
@@ -73,13 +79,15 @@ class UserSoftDeleteTest extends TestCase
         $this->assertGreaterThan(0, $tasksCount, 'User should have tasks for this test');
 
         // Delete user via API
-        $response = $this->delete("/users/{$user->id}");
+        $response = $this->authenticatedDelete("/users/{$user->id}");
 
         // Should succeed with soft delete
-        $response->seeStatusCode(200)
-                 ->seeJsonContains(['message' => 'Usuário excluído com sucesso (soft delete).'])
-                 ->seeJsonContains(['user_id' => (string)$user->id])
-                 ->seeJsonContains(['tasks_preserved' => "Foram preservadas {$tasksCount} tarefas associadas."]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário excluído com sucesso (soft delete).', $responseData['message']);
+        $this->assertEquals((string)$user->id, $responseData['user_id']);
+        $this->assertEquals("Foram preservadas {$tasksCount} tarefas associadas.", $responseData['tasks_preserved']);
 
         // User should be soft deleted
         $this->assertFalse(User::where('id', $user->id)->exists());
@@ -126,10 +134,12 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_soft_delete_invalid_user_id()
     {
-        $response = $this->delete('/users/invalid');
+        $response = $this->authenticatedDelete('/users/invalid');
 
-        $response->seeStatusCode(400)
-                 ->seeJsonContains(['error' => 'ID inválido. O ID deve ser um número positivo.']);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID inválido. O ID deve ser um número positivo.', $responseData['error']);
     }
 
     /**
@@ -137,10 +147,12 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_soft_delete_non_existent_user()
     {
-        $response = $this->delete('/users/99999');
+        $response = $this->authenticatedDelete('/users/99999');
 
-        $response->seeStatusCode(404)
-                 ->seeJsonContains(['error' => 'Usuário não encontrado.']);
+        $this->assertEquals(404, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário não encontrado.', $responseData['error']);
     }
 
     /**
@@ -148,26 +160,31 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_get_users_excludes_soft_deleted()
     {
-        // Get initial count
-        $initialCount = User::count();
-
-        // Create and delete a user
+        // Create and delete a user first
         $user = User::factory()->create(['email' => 'test.softdelete@example.com']);
+        $createdUserId = $user->id;
         $user->delete();
 
         // GET /users should not include soft deleted user
-        $response = $this->get('/users');
-        $response->seeStatusCode(200);
+        $response = $this->authenticatedGet('/users');
+        $this->assertEquals(200, $response->response->getStatusCode());
 
         $users = json_decode($response->response->getContent(), true);
         
-        // Should have same count as before (soft deleted user not included)
-        // Users are returned directly when no pagination is used
-        $this->assertEquals($initialCount, count($users));
-
         // Verify the soft deleted user is not in the results
         $userIds = array_column($users, 'id');
-        $this->assertNotContains($user->id, $userIds);
+        $this->assertNotContains($createdUserId, $userIds);
+
+        // Verify that the user exists in database with trashed
+        $this->assertTrue(User::withTrashed()->where('id', $createdUserId)->exists());
+        $this->assertFalse(User::where('id', $createdUserId)->exists());
+        
+        // Verify all returned users are not soft deleted
+        foreach ($users as $userData) {
+            $dbUser = User::find($userData['id']);
+            $this->assertNotNull($dbUser, "User {$userData['id']} should exist in active users");
+            $this->assertNull($dbUser->deleted_at, "User {$userData['id']} should not be soft deleted");
+        }
     }
 
     /**
@@ -198,8 +215,8 @@ class UserSoftDeleteTest extends TestCase
         $users = User::factory()->count(3)->create();
 
         foreach ($users as $user) {
-            $response = $this->delete("/users/{$user->id}");
-            $response->seeStatusCode(200);
+            $response = $this->authenticatedDelete("/users/{$user->id}");
+            $this->assertEquals(200, $response->response->getStatusCode());
         }
 
         // All should be soft deleted
@@ -227,12 +244,14 @@ class UserSoftDeleteTest extends TestCase
         $this->assertTrue($user->trashed());
         
         // Restore via API
-        $response = $this->patch("/users/{$user->id}/restore");
+        $response = $this->authenticatedPatch("/users/{$user->id}/restore");
         
-        $response->seeStatusCode(200)
-                 ->seeJsonContains(['message' => 'Usuário restaurado com sucesso.'])
-                 ->seeJsonContains(['user_id' => (string)$user->id])
-                 ->seeJsonContains(['tasks_associated' => 'Usuário possui 2 tarefas associadas.']);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário restaurado com sucesso.', $responseData['message']);
+        $this->assertEquals((string)$user->id, $responseData['user_id']);
+        $this->assertEquals('Usuário possui 2 tarefas associadas.', $responseData['tasks_associated']);
         
         // User should be restored
         $this->assertTrue(User::where('id', $user->id)->exists());
@@ -244,11 +263,13 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_restore_non_existent_user()
     {
-        $response = $this->patch("/users/99999/restore");
+        $response = $this->authenticatedPatch("/users/99999/restore");
         
-        $response->seeStatusCode(404)
-                 ->seeJsonContains(['error' => 'Usuário não encontrado.'])
-                 ->seeJsonContains(['message' => 'Usuário com ID 99999 não existe ou não foi soft deleted.']);
+        $this->assertEquals(404, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário não encontrado.', $responseData['error']);
+        $this->assertEquals('Usuário com ID 99999 não existe ou não foi soft deleted.', $responseData['message']);
     }
 
     /**
@@ -262,11 +283,13 @@ class UserSoftDeleteTest extends TestCase
         ]);
         
         // Try to restore active user
-        $response = $this->patch("/users/{$user->id}/restore");
+        $response = $this->authenticatedPatch("/users/{$user->id}/restore");
         
-        $response->seeStatusCode(409)
-                 ->seeJsonContains(['error' => 'Usuário não foi excluído.'])
-                 ->seeJsonContains(['message' => "Usuário com ID {$user->id} está ativo e não precisa ser restaurado."]);
+        $this->assertEquals(409, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Usuário não foi excluído.', $responseData['error']);
+        $this->assertEquals("Usuário com ID {$user->id} está ativo e não precisa ser restaurado.", $responseData['message']);
     }
 
     /**
@@ -274,10 +297,12 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_restore_invalid_user_id()
     {
-        $response = $this->patch("/users/invalid/restore");
+        $response = $this->authenticatedPatch("/users/invalid/restore");
         
-        $response->seeStatusCode(400)
-                 ->seeJsonContains(['error' => 'ID do usuário inválido.'])
-                 ->seeJsonContains(['message' => 'O ID deve ser um número inteiro positivo.']);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID do usuário inválido.', $responseData['error']);
+        $this->assertEquals('O ID deve ser um número inteiro positivo.', $responseData['message']);
     }
 }

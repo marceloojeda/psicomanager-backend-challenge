@@ -28,6 +28,7 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Lista todas as tarefas",
      *     description="Retorna uma lista paginada de tarefas com opções de filtros",
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="user_id",
      *         in="query",
@@ -78,6 +79,9 @@ class TaskController extends Controller
         $page = max(1, (int) $request->get('page', 1));
         $perPage = min(max(1, (int) $request->get('per_page', 50)), 200);
 
+        // Obter usuário autenticado
+        $authUser = $request->attributes->get('auth_user');
+
         // Filtro por user_id com cache otimizado
         if ($request->has('user_id')) {
             $userId = $request->input('user_id');
@@ -91,7 +95,9 @@ class TaskController extends Controller
 
             // Log task query by user
             $this->logOperation('tasks_queried_by_user', [
-                'user_id' => $userId,
+                'requested_user_id' => $userId,
+                'authenticated_user_id' => $authUser?->id,
+                'authenticated_user_email' => $authUser?->email,
                 'page' => $page,
                 'per_page' => $perPage,
                 'cache_enabled' => true
@@ -147,6 +153,7 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Buscar tarefa por ID",
      *     description="Retorna os dados de uma tarefa específica",
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
@@ -171,7 +178,7 @@ class TaskController extends Controller
      *     )
      * )
      */
-    function get($taskId)
+    function get(Request $request, $taskId)
     {
         // Validação do taskId
         if (!is_numeric($taskId) || $taskId <= 0) {
@@ -179,6 +186,9 @@ class TaskController extends Controller
                 'error' => 'ID inválido. O ID deve ser um número positivo.'
             ], 400);
         }
+
+        // Obter usuário autenticado
+        $authUser = $request->attributes->get('auth_user');
 
         try {
             // Usar cache para busca individual

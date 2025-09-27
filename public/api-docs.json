@@ -512,6 +512,14 @@
         }
     },
     "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Token JWT para autenticação. Formato: Bearer {token}"
+            }
+        },
         "schemas": {
             "User": {
                 "title": "User",
@@ -654,6 +662,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Authentication",
+            "description": "Operações de autenticação e autorização"
+        },
         {
             "name": "Users",
             "description": "Operações relacionadas aos usuários"

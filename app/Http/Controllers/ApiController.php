@@ -22,6 +22,19 @@ namespace App\Http\Controllers;
  *     description="Servidor de Desenvolvimento"
  * )
  * 
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT",
+ *     description="Token JWT para autenticação. Use o formato: Bearer {token}"
+ * )
+ * 
+ * @OA\Tag(
+ *     name="Authentication",
+ *     description="Operações de autenticação e autorização"
+ * )
+ * 
  * @OA\Tag(
  *     name="Users",
  *     description="Operações relacionadas aos usuários"

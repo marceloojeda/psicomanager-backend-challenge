@@ -1,17 +1,12 @@
 <?php
 
-use Laravel\Lumen\Testing\TestCase;
+use Tests\TestCase;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class TaskControllerTest extends TestCase
 {
-    public function createApplication()
-    {
-        return require __DIR__ . '/../bootstrap/app.php';
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,28 +26,28 @@ class TaskControllerTest extends TestCase
         Task::create(['user_id' => $user->id, 'description' => 'Task 1', 'status' => 'pendente']);
         Task::create(['user_id' => $user->id, 'description' => 'Task 2', 'status' => 'em progresso']);
 
-        $response = $this->json('GET', "/tasks?user_id={$user->id}");
+        $response = $this->authenticatedGet("/tasks?user_id={$user->id}");
 
-        $response->seeStatusCode(200)
-                ->seeJsonStructure([
-                    'data' => [
-                        '*' => [
-                            'id',
-                            'user_id',
-                            'description',
-                            'status',
-                            'created_at',
-                            'updated_at'
-                        ]
-                    ],
-                    'current_page',
-                    'per_page',
-                    'total'
-                ]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        
+        $this->assertArrayHasKey('data', $responseData);
+        $this->assertArrayHasKey('current_page', $responseData);
+        $this->assertArrayHasKey('per_page', $responseData);
+        $this->assertArrayHasKey('total', $responseData);
+        
+        foreach ($responseData['data'] as $task) {
+            $this->assertArrayHasKey('id', $task);
+            $this->assertArrayHasKey('user_id', $task);
+            $this->assertArrayHasKey('description', $task);
+            $this->assertArrayHasKey('status', $task);
+            $this->assertArrayHasKey('created_at', $task);
+            $this->assertArrayHasKey('updated_at', $task);
+        }
 
-        $data = json_decode($response->response->getContent(), true);
-        $this->assertEquals(2, count($data['data']));
-        $this->assertEquals(2, $data['total']);
+        $this->assertEquals(2, count($responseData['data']));
+        $this->assertEquals(2, $responseData['total']);
     }
 
     /** @test */
@@ -74,37 +69,37 @@ class TaskControllerTest extends TestCase
             ]);
         }
 
-        $response = $this->json('GET', "/tasks?user_id={$user->id}&per_page=5&page=1");
+        $response = $this->authenticatedGet("/tasks?user_id={$user->id}&per_page=5&page=1");
 
-        $response->seeStatusCode(200);
+        $this->assertEquals(200, $response->response->getStatusCode());
 
-        $data = json_decode($response->response->getContent(), true);
-        $this->assertEquals(5, count($data['data']));
-        $this->assertEquals(10, $data['total']);
-        $this->assertEquals(1, $data['current_page']);
-        $this->assertEquals(2, $data['last_page']);
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals(5, count($responseData['data']));
+        $this->assertEquals(10, $responseData['total']);
+        $this->assertEquals(1, $responseData['current_page']);
+        $this->assertEquals(2, $responseData['last_page']);
     }
 
     /** @test */
     public function test_tasks_index_validates_invalid_user_id()
     {
-        $response = $this->json('GET', '/tasks?user_id=abc');
+        $response = $this->authenticatedGet('/tasks?user_id=abc');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'user_id inválido. Deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('user_id inválido. Deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
     public function test_tasks_index_validates_negative_user_id()
     {
-        $response = $this->json('GET', '/tasks?user_id=-1');
+        $response = $this->authenticatedGet('/tasks?user_id=-1');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'user_id inválido. Deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('user_id inválido. Deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
@@ -125,12 +120,12 @@ class TaskControllerTest extends TestCase
             ]);
         }
 
-        $response = $this->json('GET', '/tasks');
+        $response = $this->authenticatedGet('/tasks');
 
-        $response->seeStatusCode(200);
+        $this->assertEquals(200, $response->response->getStatusCode());
 
-        $data = json_decode($response->response->getContent(), true);
-        $this->assertLessThanOrEqual(100, count($data)); // Máximo 100 registros
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertLessThanOrEqual(100, count($responseData)); // Máximo 100 registros
     }
 
     /** @test */
@@ -148,49 +143,51 @@ class TaskControllerTest extends TestCase
             'status' => 'pendente'
         ]);
 
-        $response = $this->json('GET', "/tasks/{$task->id}");
+        $response = $this->authenticatedGet("/tasks/{$task->id}");
 
-        $response->seeStatusCode(200)
-                ->seeJson([
-                    'id' => $task->id,
-                    'user_id' => $user->id,
-                    'description' => 'Test Task',
-                    'status' => 'pendente'
-                ]);
+        $this->assertEquals(200, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals($task->id, $responseData['data']['id']);
+        $this->assertEquals($user->id, $responseData['data']['user_id']);
+        $this->assertEquals('Test Task', $responseData['data']['description']);
+        $this->assertEquals('pendente', $responseData['data']['status']);
     }
 
     /** @test */
     public function test_tasks_get_validates_invalid_id()
     {
-        $response = $this->json('GET', '/tasks/abc');
+        $response = $this->authenticatedGet('/tasks/abc');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'ID inválido. O ID deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID inválido. O ID deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
     public function test_tasks_get_validates_negative_id()
     {
-        $response = $this->json('GET', '/tasks/-1');
+        $response = $this->authenticatedGet('/tasks/-1');
 
-        $response->seeStatusCode(400)
-                ->seeJson([
-                    'error' => 'ID inválido. O ID deve ser um número positivo.'
-                ]);
+        $this->assertEquals(400, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('ID inválido. O ID deve ser um número positivo.', $responseData['error']);
     }
 
     /** @test */
     public function test_tasks_get_not_found()
     {
-        $response = $this->json('GET', '/tasks/999');
+        // Usar um ID muito alto que certamente não existe
+        $nonExistentId = 999999999;
+        $response = $this->authenticatedGet("/tasks/{$nonExistentId}");
 
-        $response->seeStatusCode(404)
-                ->seeJson([
-                    'error' => 'Tarefa não encontrada.',
-                    'message' => 'Tarefa com ID 999 não existe.'
-                ]);
+        $this->assertEquals(404, $response->response->getStatusCode());
+        
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals('Tarefa não encontrada.', $responseData['error']);
+        $this->assertEquals("Tarefa com ID {$nonExistentId} não existe.", $responseData['message']);
     }
 
     /** @test */
@@ -203,12 +200,12 @@ class TaskControllerTest extends TestCase
         ]);
 
         // Testa limite máximo de per_page
-        $response = $this->json('GET', "/tasks?user_id={$user->id}&per_page=300");
+        $response = $this->authenticatedGet("/tasks?user_id={$user->id}&per_page=300");
 
-        $response->seeStatusCode(200);
+        $this->assertEquals(200, $response->response->getStatusCode());
 
-        $data = json_decode($response->response->getContent(), true);
-        $this->assertEquals(200, $data['per_page']); // Deve ser limitado a 200
+        $responseData = json_decode($response->response->getContent(), true);
+        $this->assertEquals(200, $responseData['per_page']); // Deve ser limitado a 200
     }
 
     /** @test */
@@ -224,13 +221,13 @@ class TaskControllerTest extends TestCase
         $task1 = Task::create(['user_id' => $user->id, 'description' => 'First Task', 'status' => 'pendente']);
         $task2 = Task::create(['user_id' => $user->id, 'description' => 'Second Task', 'status' => 'pendente']);
 
-        $response = $this->json('GET', "/tasks?user_id={$user->id}");
+        $response = $this->authenticatedGet("/tasks?user_id={$user->id}");
 
-        $response->seeStatusCode(200);
+        $this->assertEquals(200, $response->response->getStatusCode());
 
-        $data = json_decode($response->response->getContent(), true);
+        $responseData = json_decode($response->response->getContent(), true);
         // O mais recente (task2) deve vir primeiro
-        $this->assertEquals($task2->id, $data['data'][0]['id']);
-        $this->assertEquals($task1->id, $data['data'][1]['id']);
+        $this->assertEquals($task2->id, $responseData['data'][0]['id']);
+        $this->assertEquals($task1->id, $responseData['data'][1]['id']);
     }
 }

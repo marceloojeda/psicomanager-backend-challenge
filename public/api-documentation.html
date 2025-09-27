@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PsicoManager API Documentation</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.25.0/swagger-ui.css" />
+    <title>PsicoManager API Documentation - JWT Authentication</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
     <style>
         html {
             box-sizing: border-box;
@@ -26,11 +26,103 @@
             background-color: #fff;
             padding: 30px 0;
         }
+        .auth-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .auth-banner h2 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        .auth-banner p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+        .auth-instructions {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .auth-instructions h3 {
+            color: #0c5460;
+            margin-top: 0;
+        }
+        .auth-steps {
+            list-style: none;
+            counter-reset: step-counter;
+            padding-left: 0;
+        }
+        .auth-steps li {
+            counter-increment: step-counter;
+            margin: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        .auth-steps li:before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #17a2b8;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .swagger-ui .btn.authorize {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+            font-size: 16px !important;
+            padding: 10px 20px !important;
+        }
+        .swagger-ui .btn.authorize:hover {
+            background-color: #218838 !important;
+        }
     </style>
 </head>
 <body>
+    <div class="auth-banner">
+        <h2>🔐 PsicoManager API - JWT Authentication Required</h2>
+        <p><strong>Todas as rotas requerem autenticação JWT</strong></p>
+        <p>Use o botão <strong>"Authorize"</strong> abaixo para configurar seu token</p>
+    </div>
+    
+    <div class="auth-instructions">
+        <h3>📋 Como Usar a Autenticação</h3>
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+            <h4 style="color: #856404; margin-top: 0;">🆕 Primeira vez usando a API?</h4>
+            <p style="color: #856404; margin-bottom: 0;"><strong>Você precisa criar uma conta primeiro!</strong> Use o endpoint <code>POST /users</code> (público) para se registrar antes de fazer login.</p>
+        </div>
+        <ol class="auth-steps">
+            <li><strong>Faça Login:</strong> Use POST /auth/login com o email e password criados</li>
+            <li><strong>Copie o Token:</strong> Copie o "access_token" da resposta do login</li>
+            <li><strong>Clique "Authorize":</strong> Cole o token no campo de autorização (🔓)</li>
+            <li><strong>Teste as APIs:</strong> Agora você pode usar todas as rotas protegidas</li>
+        </ol>
+        <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px; padding: 10px; margin-top: 15px;">
+            <p style="margin: 0;"><strong>💡 Dicas Importantes:</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li>O token expira em <strong>1 hora</strong>. Use POST /auth/refresh para renovar</li>
+                <li>Apenas <code>POST /users</code> e <code>POST /auth/*</code> são públicos</li>
+                <li>Todas as outras rotas requerem JWT no header Authorization</li>
+            </ul>
+        </div>
+    </div>
+
     <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist@3.25.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle({
@@ -42,14 +134,78 @@
                     SwaggerUIBundle.presets.standalone
                 ],
                 layout: "BaseLayout",
+                // Configurações de autenticação
+                persistAuthorization: true,
+                supportedSubmitMethods: ['get', 'put', 'post', 'delete', 'options', 'head', 'patch'],
                 requestInterceptor: function(request) {
-                    console.log('Fazendo requisição:', request.url);
+                    console.log('🚀 Fazendo requisição para:', request.url);
+                    
+                    // Adicionar timestamp para debug
+                    if (request.headers && request.headers.Authorization) {
+                        console.log('🔐 Token JWT presente:', request.headers.Authorization.substring(0, 30) + '...');
+                    } else {
+                        console.log('⚠️ Nenhum token JWT encontrado - requisição pode falhar');
+                    }
+                    
                     return request;
                 },
                 responseInterceptor: function(response) {
-                    console.log('Resposta recebida:', response);
+                    console.log('📥 Resposta recebida de:', response.url, 'Status:', response.status);
+                    
+                    // Alertar sobre erros de autenticação
+                    if (response.status === 401) {
+                        console.warn('🚫 Erro 401: Token inválido ou expirado.');
+                        console.warn('💡 Primeiro acesso? Use POST /users para criar sua conta');
+                        console.warn('🔑 Já tem conta? Use POST /auth/login e depois POST /auth/refresh se o token expirou');
+                        
+                        // Tentar fazer parse da resposta para mostrar erro específico
+                        try {
+                            const errorData = JSON.parse(response.text);
+                            if (errorData.error) {
+                                console.warn('Detalhes do erro:', errorData.error);
+                            }
+                        } catch (e) {
+                            // Ignorar erro de parsing
+                        }
+                    }
+                    
+                    // Log de sucesso para criação de usuário
+                    if (response.url.includes('/users') && !response.url.includes('/auth') && response.status === 201) {
+                        console.log('✅ Usuário criado com sucesso!');
+                        console.log('🔑 Próximo passo: Use POST /auth/login com suas credenciais');
+                    }
+                    
+                    // Log de sucesso para login
+                    if (response.url.includes('/auth/login') && response.status === 200) {
+                        try {
+                            const loginData = JSON.parse(response.text);
+                            if (loginData.access_token) {
+                                console.log('✅ Login bem-sucedido! Token gerado.');
+                                console.log('💡 Copie o access_token e use no botão "Authorize" 🔓');
+                                console.log('⏰ Lembre-se: o token expira em 1 hora');
+                            }
+                        } catch (e) {
+                            // Ignorar erro de parsing
+                        }
+                    }
+                    
                     return response;
-                }
+                },
+                onComplete: function() {
+                    console.log('🎉 Swagger UI carregado! APIs JWT prontas para uso.');
+                    console.log('📝 Novo usuário? Siga estes passos:');
+                    console.log('   1) POST /users (criar conta)');
+                    console.log('   2) POST /auth/login (fazer login)');
+                    console.log('   3) Copie o token da resposta');
+                    console.log('   4) Clique "Authorize" 🔓');
+                    console.log('   5) Cole o token e teste as APIs protegidas');
+                },
+                defaultModelsExpandDepth: 2,
+                defaultModelExpandDepth: 3,
+                docExpansion: "list",
+                filter: false,
+                showExtensions: true,
+                showCommonExtensions: true
             });
         };
     </script>

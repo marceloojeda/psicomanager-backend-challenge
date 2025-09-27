@@ -27,8 +27,8 @@ class LoggingTest extends TestCase
         ];
 
         // Create user
-        $response = $this->post('/users', $userData);
-        $response->seeStatusCode(201);
+        $response = $this->json('POST', '/users', $userData);
+        $this->assertEquals(201, $response->response->getStatusCode());
 
         // Check if operation log file exists
         $operationLogFile = storage_path('logs/operations-' . Carbon::now()->format('Y-m-d') . '.log');
@@ -37,7 +37,7 @@ class LoggingTest extends TestCase
         // Check log content
         $logContent = file_get_contents($operationLogFile);
         $this->assertStringContainsString('user_created', $logContent);
-        $this->assertStringContainsString('logging-test@example.com', $logContent);
+        $this->assertStringContainsString($uniqueEmail, $logContent);
     }
 
     /**
@@ -52,8 +52,8 @@ class LoggingTest extends TestCase
         ]);
 
         // Delete user
-        $response = $this->delete("/users/{$user->id}");
-        $response->seeStatusCode(200);
+        $response = $this->authenticatedDelete("/users/{$user->id}");
+        $this->assertEquals(200, $response->response->getStatusCode());
 
         // Check if audit log file exists
         $auditLogFile = storage_path('logs/audit-' . Carbon::now()->format('Y-m-d') . '.log');
@@ -78,8 +78,8 @@ class LoggingTest extends TestCase
         $user->delete(); // Soft delete
 
         // Restore user
-        $response = $this->patch("/users/{$user->id}/restore");
-        $response->seeStatusCode(200);
+        $response = $this->authenticatedPatch("/users/{$user->id}/restore");
+        $this->assertEquals(200, $response->response->getStatusCode());
 
         // Check audit content
         $auditLogFile = storage_path('logs/audit-' . Carbon::now()->format('Y-m-d') . '.log');
@@ -99,14 +99,14 @@ class LoggingTest extends TestCase
         ]);
 
         // Query tasks for user
-        $response = $this->get("/tasks?user_id={$user->id}");
-        $response->seeStatusCode(200);
+        $response = $this->authenticatedGet("/tasks?user_id={$user->id}");
+        $this->assertEquals(200, $response->response->getStatusCode());
 
         // Check operation log
         $operationLogFile = storage_path('logs/operations-' . Carbon::now()->format('Y-m-d') . '.log');
         $logContent = file_get_contents($operationLogFile);
         $this->assertStringContainsString('tasks_queried_by_user', $logContent);
-        $this->assertStringContainsString("\"user_id\":\"{$user->id}\"", $logContent);
+        $this->assertStringContainsString("\"requested_user_id\":\"{$user->id}\"", $logContent);
     }
 
     /**
@@ -154,13 +154,13 @@ class LoggingTest extends TestCase
     public function test_error_logging()
     {
         // Try to create user with invalid data
-        $response = $this->post('/users', [
+        $response = $this->json('POST', '/users', [
             'name' => 'Test',
             'email' => 'invalid-email',
             'password' => '123' // Too short
         ]);
 
-        $response->seeStatusCode(422);
+        $this->assertEquals(422, $response->response->getStatusCode());
 
         // Error should still be logged in operations
         $operationLogFile = storage_path('logs/operations-' . Carbon::now()->format('Y-m-d') . '.log');

@@ -53,6 +53,11 @@ $app->singleton(
     App\Console\Kernel::class
 );
 
+// Registrar JWTService
+$app->singleton(App\Services\JWTService::class, function ($app) {
+    return new App\Services\JWTService();
+});
+
 /*
 |--------------------------------------------------------------------------
 | Register Config Files
@@ -83,9 +88,9 @@ $app->configure('cache');
 //     App\Http\Middleware\ExampleMiddleware::class
 // ]);
 
-// $app->routeMiddleware([
-//     'auth' => App\Http\Middleware\Authenticate::class,
-// ]);
+$app->routeMiddleware([
+    'jwt.auth' => App\Http\Middleware\JWTAuthMiddleware::class,
+]);
 
 /*
 |--------------------------------------------------------------------------

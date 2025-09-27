@@ -1,13 +1,190 @@
 {
   "info": {
     "name": "PsicoManager API Collection",
-    "description": "Collection completa para testar todos os endpoints da API PsicoManager",
-    "version": "1.0.0",
+    "description": "Collection completa com autenticação JWT para todos os endpoints da API PsicoManager",
+    "version": "2.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
-      "name": "Users",
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatic token extraction and storage",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    ",
+                  "    // Store tokens in environment variables",
+                  "    pm.environment.set('access_token', responseJson.access_token);",
+                  "    pm.environment.set('refresh_token', responseJson.refresh_token);",
+                  "    ",
+                  "    // Store user info",
+                  "    if (responseJson.user) {",
+                  "        pm.environment.set('user_id', responseJson.user.id);",
+                  "        pm.environment.set('user_name', responseJson.user.name);",
+                  "        pm.environment.set('user_email', responseJson.user.email);",
+                  "    }",
+                  "    ",
+                  "    console.log('🎉 Login successful! Tokens stored automatically.');",
+                  "    console.log('Access Token:', responseJson.access_token.substring(0, 50) + '...');",
+                  "} else {",
+                  "    console.log('❌ Login failed:', pm.response.text());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatic token refresh and storage",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    ",
+                  "    // Update tokens in environment variables",
+                  "    pm.environment.set('access_token', responseJson.access_token);",
+                  "    pm.environment.set('refresh_token', responseJson.refresh_token);",
+                  "    ",
+                  "    console.log('🔄 Tokens refreshed successfully!');",
+                  "    console.log('New Access Token:', responseJson.access_token.substring(0, 50) + '...');",
+                  "} else {",
+                  "    console.log('❌ Token refresh failed:', pm.response.text());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 Users (Protected)",
       "item": [
         {
           "name": "Listar Usuários",
@@ -18,6 +195,11 @@
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -26,23 +208,7 @@
               "path": ["users"]
             }
           },
-          "response": [
-            {
-              "name": "Success",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/users",
-                  "host": ["{{base_url}}"],
-                  "path": ["users"]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "body": "{\"data\":[{\"id\":77,\"name\":\"João Silva\",\"email\":\"joao@example.com\",\"created_at\":\"2025-09-25T14:30:00.000000Z\"}],\"current_page\":1,\"per_page\":15,\"total\":1}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "Listar Usuários com Filtros",
@@ -53,6 +219,11 @@
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -62,22 +233,20 @@
               "query": [
                 {
                   "key": "name",
-                  "value": "João",
-                  "description": "Filtrar por nome (busca parcial)"
+                  "value": "João"
                 },
                 {
                   "key": "page",
-                  "value": "1",
-                  "description": "Número da página"
+                  "value": "1"
                 },
                 {
                   "key": "per_page",
-                  "value": "10",
-                  "description": "Itens por página"
+                  "value": "10"
                 }
               ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Buscar Usuário por ID",
@@ -88,6 +257,11 @@
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -95,7 +269,8 @@
               "host": ["{{base_url}}"],
               "path": ["users", "{{user_id}}"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Criar Usuário",
@@ -103,26 +278,32 @@
             "method": "POST",
             "header": [
               {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
               },
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"password\": \"123456\"\n}"
+              "raw": "{\n  \"name\": \"Novo Usuário\",\n  \"email\": \"novo@example.com\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/users",
               "host": ["{{base_url}}"],
               "path": ["users"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Excluir Usuário (Soft Delete)",
@@ -133,6 +314,11 @@
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -140,7 +326,8 @@
               "host": ["{{base_url}}"],
               "path": ["users", "{{user_id}}"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Restaurar Usuário",
@@ -151,6 +338,11 @@
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -158,15 +350,126 @@
               "host": ["{{base_url}}"],
               "path": ["users", "{{user_id}}", "restore"]
             }
-          }
+          },
+          "response": []
         }
       ]
     },
     {
-      "name": "Tasks",
+      "name": "📋 Tasks (Protected)",
       "item": [
         {
           "name": "Listar Tarefas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tasks",
+              "host": ["{{base_url}}"],
+              "path": ["tasks"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Tarefas por Usuário",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tasks?user_id={{user_id}}&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["tasks"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Tarefa por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tasks/{{task_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tasks", "{{task_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🧪 Test Scenarios (JWT)",
+      "item": [
+        {
+          "name": "Test - Access Without Token (Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test that protected routes require authentication",
+                  "pm.test('Should return 401 without token', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response should contain error message', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -181,70 +484,27 @@
               "host": ["{{base_url}}"],
               "path": ["tasks"]
             }
-          }
+          },
+          "response": []
         },
         {
-          "name": "Listar Tarefas por Usuário",
+          "name": "Test - Invalid Token (Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test that invalid tokens are rejected",
+                  "pm.test('Should return 401 with invalid token', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/tasks?user_id={{user_id}}&page=1&per_page=50",
-              "host": ["{{base_url}}"],
-              "path": ["tasks"],
-              "query": [
-                {
-                  "key": "user_id",
-                  "value": "{{user_id}}",
-                  "description": "ID do usuário para filtrar tarefas"
-                },
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Número da página"
-                },
-                {
-                  "key": "per_page",
-                  "value": "50",
-                  "description": "Itens por página (máximo 50)"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Buscar Tarefa por ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/tasks/{{task_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["tasks", "{{task_id}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cenários de Teste",
-      "item": [
-        {
-          "name": "Teste de Validação - Email Duplicado",
-          "request": {
-            "method": "POST",
             "header": [
               {
                 "key": "Accept",
@@ -252,137 +512,97 @@
                 "type": "text"
               },
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "Bearer invalid_token_here",
                 "type": "text"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Usuário Duplicado\",\n  \"email\": \"joao@example.com\",\n  \"password\": \"123456\"\n}"
-            },
             "url": {
-              "raw": "{{base_url}}/users",
+              "raw": "{{base_url}}/tasks",
               "host": ["{{base_url}}"],
-              "path": ["users"]
+              "path": ["tasks"]
             }
-          }
+          },
+          "response": []
         },
         {
-          "name": "Teste de Validação - Dados Inválidos",
+          "name": "Complete Auth Flow Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Complete authentication flow test",
+                  "pm.test('Login should be successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    ",
+                  "    pm.test('Response should contain access_token', function () {",
+                  "        pm.expect(responseJson).to.have.property('access_token');",
+                  "        pm.expect(responseJson.access_token).to.be.a('string');",
+                  "        pm.expect(responseJson.access_token.length).to.be.above(100);",
+                  "    });",
+                  "    ",
+                  "    pm.test('Response should contain refresh_token', function () {",
+                  "        pm.expect(responseJson).to.have.property('refresh_token');",
+                  "        pm.expect(responseJson.refresh_token).to.be.a('string');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Token type should be bearer', function () {",
+                  "        pm.expect(responseJson.token_type).to.eql('bearer');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Should contain user information', function () {",
+                  "        pm.expect(responseJson).to.have.property('user');",
+                  "        pm.expect(responseJson.user).to.have.property('id');",
+                  "        pm.expect(responseJson.user).to.have.property('email');",
+                  "    });",
+                  "    ",
+                  "    // Store tokens for subsequent requests",
+                  "    pm.environment.set('access_token', responseJson.access_token);",
+                  "    pm.environment.set('refresh_token', responseJson.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Accept",
+                "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
               },
               {
-                "key": "Content-Type",
+                "key": "Accept",
                 "value": "application/json",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"\",\n  \"email\": \"email-inválido\",\n  \"password\": \"123\"\n}"
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/users",
+              "raw": "{{base_url}}/auth/login",
               "host": ["{{base_url}}"],
-              "path": ["users"]
+              "path": ["auth", "login"]
             }
-          }
-        },
-        {
-          "name": "Teste 404 - Usuário Inexistente",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users/99999",
-              "host": ["{{base_url}}"],
-              "path": ["users", "99999"]
-            }
-          }
-        },
-        {
-          "name": "Teste ID Inválido",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users/abc",
-              "host": ["{{base_url}}"],
-              "path": ["users", "abc"]
-            }
-          }
+          },
+          "response": []
         }
       ]
-    }
-  ],
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "// Log de debug para requisições",
-          "console.log('Executando request para:', pm.request.url.toString());"
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "// Testes automáticos básicos",
-          "pm.test('Status code is success', function () {",
-          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204, 400, 404, 422]);",
-          "});",
-          "",
-          "pm.test('Response time is acceptable', function () {",
-          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
-          "});",
-          "",
-          "if (pm.response.headers.has('Content-Type')) {",
-          "    pm.test('Content-Type is JSON', function () {",
-          "        pm.expect(pm.response.headers.get('Content-Type')).to.include('json');",
-          "    });",
-          "}"
-        ]
-      }
     }
   ],
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:8888",
-      "type": "string"
-    },
-    {
-      "key": "user_id",
-      "value": "77",
-      "type": "string"
-    },
-    {
-      "key": "task_id",
-      "value": "1",
-      "type": "string"
+      "value": "http://localhost:8888"
     }
   ]
 }
