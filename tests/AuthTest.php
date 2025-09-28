@@ -24,14 +24,15 @@ class AuthTest extends TestCase
     public function test_user_can_login_with_valid_credentials()
     {
         // Arrange
+        $email = 'test-login-' . time() . '@example.com';
         $user = User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => $email,
             'password' => Hash::make('password123')
         ]);
 
         $loginData = [
-            'email' => 'test@example.com',
+            'email' => $email,
             'password' => 'password123'
         ];
 
@@ -337,8 +338,8 @@ class AuthTest extends TestCase
         ]);
         $response->seeStatusCode(200);
 
-        // Act & Assert - Users endpoint
-        $response = $this->json('GET', '/users', [], [
+        // Act & Assert - Tasks endpoint (usuário pode ver suas próprias tarefas)
+        $response = $this->json('GET', '/tasks', [], [
             'Authorization' => 'Bearer ' . $token
         ]);
         $response->seeStatusCode(200);

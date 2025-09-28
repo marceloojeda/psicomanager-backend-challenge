@@ -111,6 +111,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'role' => $user->role,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
                 'is_deleted' => $user->deleted_at !== null // Informar se o usuário está soft deleted

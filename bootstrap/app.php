@@ -90,6 +90,7 @@ $app->configure('cache');
 
 $app->routeMiddleware([
     'jwt.auth' => App\Http\Middleware\JWTAuthMiddleware::class,
+    'role' => App\Http\Middleware\RoleMiddleware::class,
 ]);
 
 /*

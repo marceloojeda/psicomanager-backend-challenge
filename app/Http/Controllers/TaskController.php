@@ -82,20 +82,39 @@ class TaskController extends Controller
         // Obter usuário autenticado
         $authUser = $request->attributes->get('auth_user');
 
-        // Filtro por user_id com cache otimizado
-        if ($request->has('user_id')) {
-            $userId = $request->input('user_id');
-            
+        // Implementar autorização baseada em roles
+        $requestedUserId = $request->input('user_id');
+        
+        if ($requestedUserId) {
             // Validação do user_id
-            if (!is_numeric($userId) || $userId <= 0) {
+            if (!is_numeric($requestedUserId) || $requestedUserId <= 0) {
                 return response()->json([
                     'error' => 'user_id inválido. Deve ser um número positivo.'
                 ], 400);
             }
+            
+            // Verificar autorização: usuário comum só pode ver suas próprias tarefas
+            if (!$authUser->isAdmin() && $authUser->id != $requestedUserId) {
+                return response()->json([
+                    'error' => 'Acesso negado',
+                    'message' => 'Você só pode visualizar suas próprias tarefas',
+                    'user_role' => $authUser->role
+                ], 403);
+            }
+        } else {
+            // Se não foi especificado user_id, definir comportamento baseado na role
+            if ($authUser->isUser()) {
+                // Usuários comuns só veem suas próprias tarefas
+                $requestedUserId = $authUser->id;
+            }
+            // Admins podem ver todas as tarefas (não definir requestedUserId)
+        }
 
+        // Filtro por user_id com cache otimizado
+        if ($requestedUserId) {
             // Log task query by user
             $this->logOperation('tasks_queried_by_user', [
-                'requested_user_id' => $userId,
+                'requested_user_id' => $requestedUserId,
                 'authenticated_user_id' => $authUser?->id,
                 'authenticated_user_email' => $authUser?->email,
                 'page' => $page,
@@ -105,7 +124,7 @@ class TaskController extends Controller
 
             // Usar cache para consultas por usuário (mais comuns)
             try {
-                $cachedResult = $this->cacheService->getTasksByUserId((int) $userId, $page, $perPage);
+                $cachedResult = $this->cacheService->getTasksByUserId((int) $requestedUserId, $page, $perPage);
                 
                 // Transformar dados para manter compatibilidade com formato anterior
                 return response()->json([
@@ -120,9 +139,9 @@ class TaskController extends Controller
                 // Fallback sem cache em caso de erro
                 Log::warning('Erro no cache, usando consulta direta', [
                     'error' => $e->getMessage(),
-                    'user_id' => $userId
+                    'user_id' => $requestedUserId
                 ]);
-                return $this->getTasksWithoutCache($userId, $page, $perPage);
+                return $this->getTasksWithoutCache($requestedUserId, $page, $perPage);
             }
         }
 

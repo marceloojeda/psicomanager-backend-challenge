@@ -54,6 +54,39 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Authenticate as admin user
+     */
+    protected function authenticateAdmin($userData = [])
+    {
+        $defaultData = [
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password123'),
+            'role' => 'admin'
+        ];
+
+        $userData = array_merge($defaultData, $userData);
+
+        // Create admin user
+        $this->authUser = User::create($userData);
+
+        // Login to get JWT token
+        $loginResponse = $this->json('POST', '/auth/login', [
+            'email' => $userData['email'],
+            'password' => 'password123' // Use plain password for login
+        ]);
+
+        $loginData = json_decode($loginResponse->response->getContent(), true);
+        
+        if (isset($loginData['access_token'])) {
+            $this->authToken = $loginData['access_token'];
+            return $this->authToken;
+        }
+
+        throw new \Exception('Failed to authenticate admin user: ' . $loginResponse->response->getContent());
+    }
+
+    /**
      * Make authenticated GET request
      */
     protected function authenticatedGet($uri, array $headers = [])

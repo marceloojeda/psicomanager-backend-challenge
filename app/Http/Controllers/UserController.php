@@ -235,6 +235,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email|max:255',
             'password' => 'required|string|min:6|max:255',
+            'role' => 'sometimes|in:user,admin', // Role opcional, padrão é 'user'
         ]);
 
         // Retorna erro de validação se houver
@@ -246,8 +247,13 @@ class UserController extends Controller
         }
 
         // Cria o usuário com senha criptografada
-        $userData = $request->only(['name', 'email']);
+        $userData = $request->only(['name', 'email', 'role']);
         $userData['password'] = Hash::make($request->get('password'));
+        
+        // Se role não foi fornecido, usar 'user' como padrão
+        if (!isset($userData['role'])) {
+            $userData['role'] = 'user';
+        }
 
         try {
             $user = User::create($userData);
@@ -266,6 +272,7 @@ class UserController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => $user->role,
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
                 ],

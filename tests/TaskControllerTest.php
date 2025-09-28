@@ -15,18 +15,29 @@ class TaskControllerTest extends TestCase
     /** @test */
     public function test_tasks_index_with_valid_user_id()
     {
-        // Cria usuário de teste
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => Hash::make('password')
+        // Cria usuário específico para o teste
+        $user = User::factory()->create([
+            'email' => 'task-test-' . time() . '@example.com',
+            'password' => app('hash')->make('password123')
         ]);
-
-        // Cria algumas tarefas
+        
+        // Autentica como este usuário específico
+        $loginResponse = $this->json('POST', '/auth/login', [
+            'email' => $user->email,
+            'password' => 'password123'
+        ]);
+        
+        $this->assertEquals(200, $loginResponse->response->getStatusCode());
+        
+        $loginData = json_decode($loginResponse->response->getContent(), true);
+        $this->authToken = $loginData['access_token'];
+        
+        // Cria algumas tarefas para este usuário específico
         Task::create(['user_id' => $user->id, 'description' => 'Task 1', 'status' => 'pendente']);
         Task::create(['user_id' => $user->id, 'description' => 'Task 2', 'status' => 'em progresso']);
 
-        $response = $this->authenticatedGet("/tasks?user_id={$user->id}");
+        // Usuário vê suas próprias tarefas
+        $response = $this->authenticatedGet("/tasks");
 
         $this->assertEquals(200, $response->response->getStatusCode());
         
@@ -69,6 +80,8 @@ class TaskControllerTest extends TestCase
             ]);
         }
 
+        // Autenticar como admin para usar user_id específico
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet("/tasks?user_id={$user->id}&per_page=5&page=1");
 
         $this->assertEquals(200, $response->response->getStatusCode());
@@ -83,6 +96,8 @@ class TaskControllerTest extends TestCase
     /** @test */
     public function test_tasks_index_validates_invalid_user_id()
     {
+        // Autenticar como admin para ter permissão de usar user_id
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet('/tasks?user_id=abc');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -94,6 +109,8 @@ class TaskControllerTest extends TestCase
     /** @test */
     public function test_tasks_index_validates_negative_user_id()
     {
+        // Autenticar como admin para ter permissão de usar user_id
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet('/tasks?user_id=-1');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -120,6 +137,8 @@ class TaskControllerTest extends TestCase
             ]);
         }
 
+        // Autenticar como admin para ver todas as tarefas
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet('/tasks');
 
         $this->assertEquals(200, $response->response->getStatusCode());
@@ -143,6 +162,8 @@ class TaskControllerTest extends TestCase
             'status' => 'pendente'
         ]);
 
+        // Autenticar como admin para acessar qualquer tarefa
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet("/tasks/{$task->id}");
 
         $this->assertEquals(200, $response->response->getStatusCode());
@@ -157,6 +178,8 @@ class TaskControllerTest extends TestCase
     /** @test */
     public function test_tasks_get_validates_invalid_id()
     {
+        // Autenticar como admin 
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet('/tasks/abc');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -168,6 +191,8 @@ class TaskControllerTest extends TestCase
     /** @test */
     public function test_tasks_get_validates_negative_id()
     {
+        // Autenticar como admin
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet('/tasks/-1');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -181,6 +206,9 @@ class TaskControllerTest extends TestCase
     {
         // Usar um ID muito alto que certamente não existe
         $nonExistentId = 999999999;
+        
+        // Autenticar como admin
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet("/tasks/{$nonExistentId}");
 
         $this->assertEquals(404, $response->response->getStatusCode());
@@ -199,6 +227,8 @@ class TaskControllerTest extends TestCase
             'password' => Hash::make('password')
         ]);
 
+        // Autenticar como admin para usar user_id específico
+        $this->authenticateAdmin();
         // Testa limite máximo de per_page
         $response = $this->authenticatedGet("/tasks?user_id={$user->id}&per_page=300");
 
@@ -221,6 +251,8 @@ class TaskControllerTest extends TestCase
         $task1 = Task::create(['user_id' => $user->id, 'description' => 'First Task', 'status' => 'pendente']);
         $task2 = Task::create(['user_id' => $user->id, 'description' => 'Second Task', 'status' => 'pendente']);
 
+        // Autenticar como admin para usar user_id específico
+        $this->authenticateAdmin();
         $response = $this->authenticatedGet("/tasks?user_id={$user->id}");
 
         $this->assertEquals(200, $response->response->getStatusCode());

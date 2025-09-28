@@ -16,6 +16,9 @@ class UserControllerTest extends TestCase
         User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
         User::factory()->create(['name' => 'Maria Santos', 'email' => 'maria@example.com']);
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+        
         $response = $this->authenticatedGet('/users');
 
         $this->assertEquals(200, $response->response->getStatusCode());
@@ -30,7 +33,6 @@ class UserControllerTest extends TestCase
         foreach ($responseData as $user) {
             $this->assertArrayNotHasKey('password', $user);
             $this->assertArrayNotHasKey('remember_token', $user);
-            // Verificar que campos permitidos estão presentes
             $this->assertArrayHasKey('id', $user);
             $this->assertArrayHasKey('name', $user);
             $this->assertArrayHasKey('email', $user);
@@ -43,6 +45,9 @@ class UserControllerTest extends TestCase
     {
         $user = User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
         User::factory()->create(['name' => 'Maria Santos', 'email' => 'maria@example.com']);
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         $response = $this->authenticatedGet('/users?id=' . $user->id);
 
@@ -63,6 +68,9 @@ class UserControllerTest extends TestCase
     {
         User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
         User::factory()->create(['name' => 'Maria Santos', 'email' => 'maria@example.com']);
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         $response = $this->authenticatedGet('/users?name=João Silva');
 
@@ -89,6 +97,9 @@ class UserControllerTest extends TestCase
         User::factory()->create(['name' => 'João Santos', 'email' => 'joao.santos@example.com']);
         User::factory()->create(['name' => 'Maria Santos', 'email' => 'maria@example.com']);
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedGet('/users?name=João');
 
         $this->assertEquals(200, $response->response->getStatusCode());
@@ -107,6 +118,9 @@ class UserControllerTest extends TestCase
     {
         User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
         User::factory()->create(['name' => 'Maria Santos', 'email' => 'maria@example.com']);
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         $response = $this->authenticatedGet('/users?name=joão');
 
@@ -131,6 +145,9 @@ class UserControllerTest extends TestCase
         $user1 = User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
         $user2 = User::factory()->create(['name' => 'João Santos', 'email' => 'joao.santos@example.com']);
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         // Filtrar por ID e nome - deve retornar apenas se ambos coincidirem
         $response = $this->authenticatedGet('/users?id=' . $user1->id . '&name=João Silva');
 
@@ -151,6 +168,9 @@ class UserControllerTest extends TestCase
     {
         User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         // Use um nome único que garantidamente não existe
         $uniqueName = 'UsuarioInexistente' . time();
         $response = $this->authenticatedGet("/users?name={$uniqueName}");
@@ -166,6 +186,9 @@ class UserControllerTest extends TestCase
     public function test_get_user_by_id()
     {
         $user = User::factory()->create(['name' => 'João Silva', 'email' => 'joao@example.com']);
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         $response = $this->authenticatedGet('/users/' . $user->id);
 
@@ -183,6 +206,9 @@ class UserControllerTest extends TestCase
     {
         // Criar 7 usuários de teste
         User::factory()->count(7)->create();
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         $response = $this->authenticatedGet('/users?page=1&per_page=3');
 
@@ -211,6 +237,9 @@ class UserControllerTest extends TestCase
         User::factory()->create(['name' => 'João Santos']);
         User::factory()->create(['name' => 'João Pedro']);
         User::factory()->create(['name' => 'Maria Silva']);
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         // Testar paginação com filtro de nome
         $response = $this->authenticatedGet('/users?name=João&page=1&per_page=2');
@@ -242,6 +271,9 @@ class UserControllerTest extends TestCase
         // Criar alguns usuários
         User::factory()->count(3)->create();
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedGet('/users');
 
         $this->assertEquals(200, $response->response->getStatusCode());
@@ -255,6 +287,9 @@ class UserControllerTest extends TestCase
 
     public function test_get_user_by_id_invalid_non_numeric()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedGet('/users/abc');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -265,6 +300,9 @@ class UserControllerTest extends TestCase
 
     public function test_get_user_by_id_invalid_negative()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedGet('/users/-1');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -275,6 +313,9 @@ class UserControllerTest extends TestCase
 
     public function test_get_user_by_id_invalid_zero()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedGet('/users/0');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -285,6 +326,9 @@ class UserControllerTest extends TestCase
 
     public function test_get_user_by_id_not_found()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedGet('/users/999');
 
         $this->assertEquals(404, $response->response->getStatusCode());
@@ -301,6 +345,9 @@ class UserControllerTest extends TestCase
             'email' => 'joao@example.com',
             'password' => app('hash')->make('senha123')
         ]);
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         $response = $this->authenticatedGet('/users/' . $user->id);
 

@@ -107,8 +107,8 @@ $router->group(['prefix' => 'tasks', 'middleware' => 'jwt.auth'], function () us
     $router->post('/cache/warm', 'TaskController@warmCache');
 });
 
-// Rotas de usuários protegidas (apenas consultas e operações administrativas)
-$router->group(['prefix' => 'users', 'middleware' => 'jwt.auth'], function () use ($router) {
+// Rotas de usuários protegidas (apenas administradores)
+$router->group(['prefix' => 'users', 'middleware' => ['jwt.auth', 'role:admin']], function () use ($router) {
     $router->get('/', 'UserController@index');
     $router->get('/{userId}', 'UserController@get');
     $router->delete('/{userId}', 'UserController@delete');

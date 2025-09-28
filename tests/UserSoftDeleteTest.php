@@ -33,6 +33,9 @@ class UserSoftDeleteTest extends TestCase
         // Ensure user exists
         $this->assertTrue(User::where('id', $user->id)->exists());
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         // Delete user via API
         $response = $this->authenticatedDelete("/users/{$user->id}");
 
@@ -77,6 +80,9 @@ class UserSoftDeleteTest extends TestCase
         
         $tasksCount = $user->tasks()->count();
         $this->assertGreaterThan(0, $tasksCount, 'User should have tasks for this test');
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         // Delete user via API
         $response = $this->authenticatedDelete("/users/{$user->id}");
@@ -134,6 +140,9 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_soft_delete_invalid_user_id()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedDelete('/users/invalid');
 
         $this->assertEquals(400, $response->response->getStatusCode());
@@ -147,6 +156,9 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_soft_delete_non_existent_user()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         $response = $this->authenticatedDelete('/users/99999');
 
         $this->assertEquals(404, $response->response->getStatusCode());
@@ -164,6 +176,9 @@ class UserSoftDeleteTest extends TestCase
         $user = User::factory()->create(['email' => 'test.softdelete@example.com']);
         $createdUserId = $user->id;
         $user->delete();
+
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
 
         // GET /users should not include soft deleted user
         $response = $this->authenticatedGet('/users');
@@ -214,6 +229,9 @@ class UserSoftDeleteTest extends TestCase
     {
         $users = User::factory()->count(3)->create();
 
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+
         foreach ($users as $user) {
             $response = $this->authenticatedDelete("/users/{$user->id}");
             $this->assertEquals(200, $response->response->getStatusCode());
@@ -243,6 +261,9 @@ class UserSoftDeleteTest extends TestCase
         $user->delete();
         $this->assertTrue($user->trashed());
         
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+        
         // Restore via API
         $response = $this->authenticatedPatch("/users/{$user->id}/restore");
         
@@ -263,6 +284,9 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_restore_non_existent_user()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+        
         $response = $this->authenticatedPatch("/users/99999/restore");
         
         $this->assertEquals(404, $response->response->getStatusCode());
@@ -282,6 +306,9 @@ class UserSoftDeleteTest extends TestCase
             'email' => 'active@test.com'
         ]);
         
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+        
         // Try to restore active user
         $response = $this->authenticatedPatch("/users/{$user->id}/restore");
         
@@ -297,6 +324,9 @@ class UserSoftDeleteTest extends TestCase
      */
     public function test_restore_invalid_user_id()
     {
+        // Autenticar como admin para acessar endpoint de usuários
+        $this->authenticateAdmin();
+        
         $response = $this->authenticatedPatch("/users/invalid/restore");
         
         $this->assertEquals(400, $response->response->getStatusCode());
