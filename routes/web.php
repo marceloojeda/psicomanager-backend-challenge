@@ -100,6 +100,9 @@ $router->group(['prefix' => 'tasks', 'middleware' => 'jwt.auth'], function () us
 
     $router->get('/', 'TaskController@index');
     $router->get('/{taskId}', 'TaskController@get');
+    $router->post('/', 'TaskController@store');
+    $router->put('/{taskId}', 'TaskController@update');
+    $router->delete('/{taskId}', 'TaskController@destroy');
     
     // Rotas de gerenciamento de cache
     $router->post('/cache/clear', 'TaskController@clearCache');

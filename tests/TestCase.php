@@ -47,7 +47,7 @@ abstract class TestCase extends BaseTestCase
         
         if (isset($loginData['access_token'])) {
             $this->authToken = $loginData['access_token'];
-            return $this->authToken;
+            return $this->authUser;
         }
 
         throw new \Exception('Failed to authenticate user: ' . $loginResponse->response->getContent());
@@ -80,7 +80,7 @@ abstract class TestCase extends BaseTestCase
         
         if (isset($loginData['access_token'])) {
             $this->authToken = $loginData['access_token'];
-            return $this->authToken;
+            return $this->authUser;
         }
 
         throw new \Exception('Failed to authenticate admin user: ' . $loginResponse->response->getContent());

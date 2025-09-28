@@ -84,6 +84,11 @@
                                                 },
                                                 "email": {
                                                     "type": "string"
+                                                },
+                                                "role": {
+                                                    "type": "string",
+                                                    "enum": ["user", "admin"],
+                                                    "example": "user"
                                                 }
                                             },
                                             "type": "object"
@@ -252,6 +257,11 @@
                                                 "email": {
                                                     "type": "string"
                                                 },
+                                                "role": {
+                                                    "type": "string",
+                                                    "enum": ["user", "admin"],
+                                                    "example": "user"
+                                                },
                                                 "created_at": {
                                                     "type": "string"
                                                 },
@@ -368,6 +378,73 @@
                         "bearerAuth": []
                     }
                 ]
+            },
+            "post": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Criar nova tarefa",
+                "description": "Cria uma nova tarefa para o usuário autenticado",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "description"
+                                ],
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Concluir relatório mensal"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": ["pendente", "em progresso", "concluida"],
+                                        "example": "pendente"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tarefa criada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tarefa criada com sucesso"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Task"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Dados de entrada inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/tasks/{taskId}": {
@@ -413,6 +490,158 @@
                     },
                     "404": {
                         "description": "Tarefa não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Atualizar tarefa",
+                "description": "Atualiza uma tarefa existente. Usuários comuns só podem atualizar suas próprias tarefas",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "in": "path",
+                        "description": "ID da tarefa",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Relatório mensal atualizado"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": ["pendente", "em progresso", "concluida"],
+                                        "example": "em progresso"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tarefa atualizada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tarefa atualizada com sucesso"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Task"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tarefa não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Acesso negado - não é proprietário da tarefa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Excluir tarefa",
+                "description": "Exclui uma tarefa existente. Usuários comuns só podem excluir suas próprias tarefas",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "in": "path",
+                        "description": "ID da tarefa",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tarefa excluída com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tarefa excluída com sucesso"
+                                        },
+                                        "task_id": {
+                                            "type": "string",
+                                            "example": "1"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tarefa não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Acesso negado - não é proprietário da tarefa",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -550,8 +779,15 @@
                                         "description": "Senha (mínimo 6 caracteres)",
                                         "type": "string",
                                         "example": "123456"
+                                    },
+                                    "role": {
+                                        "description": "Role do usuário (opcional, padrão: 'user')",
+                                        "type": "string",
+                                        "enum": ["user", "admin"],
+                                        "example": "user"
                                     }
                                 },
+                                "required": ["name", "email", "password"],
                                 "type": "object"
                             }
                         }
@@ -828,6 +1064,12 @@
                         "type": "string",
                         "format": "email",
                         "example": "joao@example.com"
+                    },
+                    "role": {
+                        "description": "Role/perfil do usuário no sistema",
+                        "type": "string",
+                        "enum": ["user", "admin"],
+                        "example": "user"
                     },
                     "created_at": {
                         "description": "Data de criação",

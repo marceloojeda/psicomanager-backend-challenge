@@ -7,6 +7,7 @@ use App\Services\TaskCacheService;
 use App\Traits\LogsOperations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class TaskController extends Controller
 {
@@ -241,6 +242,314 @@ class TaskController extends Controller
                     'message' => "Tarefa com ID {$taskId} não existe."
                 ], 404);
             }
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/tasks",
+     *     tags={"Tasks"},
+     *     summary="Criar nova tarefa",
+     *     description="Cria uma nova tarefa para o usuário autenticado",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"description"},
+     *             @OA\Property(property="description", type="string", example="Concluir relatório mensal"),
+     *             @OA\Property(property="status", type="string", enum={"pendente", "em progresso", "concluida"}, example="pendente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Tarefa criada com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Tarefa criada com sucesso"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Task")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Dados de entrada inválidos")
+     * )
+     */
+    public function store(Request $request)
+    {
+        $user = $request->attributes->get('auth_user');
+        
+        // Validação dos dados
+        $validator = Validator::make($request->all(), [
+            'description' => 'required|string|min:3|max:500',
+            'status' => 'sometimes|string|in:pendente,em progresso,concluida,cancelada'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Dados inválidos',
+                'messages' => $validator->errors()
+            ], 400);
+        }
+        
+        $validatedData = $request->only(['description', 'status']);
+        
+        // Definir status padrão se não fornecido
+        if (!isset($validatedData['status'])) {
+            $validatedData['status'] = 'pendente';
+        }
+        
+        // Associar tarefa ao usuário autenticado
+        $validatedData['user_id'] = $user->id;
+        
+        try {
+            $task = Task::create($validatedData);
+            
+            // Log da criação
+            $this->logOperation('task_created', [
+                'task_id' => $task->id,
+                'user_id' => $user->id,
+                'description' => $task->description,
+                'status' => $task->status,
+                'created_at' => $task->created_at->toISOString()
+            ]);
+            
+            // Limpar cache relacionado
+            $this->cacheService->invalidateUserCache($user->id);
+            
+            return response()->json([
+                'message' => 'Tarefa criada com sucesso',
+                'data' => $task
+            ], 201);
+            
+        } catch (\Exception $e) {
+            $this->logError('task_creation_error', $e, [
+                'user_id' => $user->id,
+                'request_data' => $validatedData
+            ]);
+            
+            return response()->json([
+                'error' => 'Erro interno do servidor',
+                'message' => 'Não foi possível criar a tarefa'
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/tasks/{taskId}",
+     *     tags={"Tasks"},
+     *     summary="Atualizar tarefa",
+     *     description="Atualiza uma tarefa existente. Usuários comuns só podem atualizar suas próprias tarefas",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="taskId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="description", type="string", example="Relatório mensal atualizado"),
+     *             @OA\Property(property="status", type="string", enum={"pendente", "em progresso", "concluida"}, example="em progresso")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tarefa atualizada com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Tarefa atualizada com sucesso"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Task")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Tarefa não encontrada"),
+     *     @OA\Response(response=403, description="Acesso negado - não é proprietário da tarefa")
+     * )
+     */
+    public function update(Request $request, $taskId)
+    {
+        $user = $request->attributes->get('auth_user');
+        
+        // Validação do ID
+        if (!is_numeric($taskId) || $taskId <= 0) {
+            return response()->json([
+                'error' => 'ID inválido',
+                'message' => 'O ID da tarefa deve ser um número positivo.'
+            ], 400);
+        }
+        
+        // Buscar tarefa
+        $task = Task::find($taskId);
+        if (!$task) {
+            return response()->json([
+                'error' => 'Tarefa não encontrada',
+                'message' => "Tarefa com ID {$taskId} não existe."
+            ], 404);
+        }
+        
+        // Verificar se usuário pode atualizar esta tarefa
+        if ($user->isUser() && $task->user_id !== $user->id) {
+            return response()->json([
+                'error' => 'Acesso negado',
+                'message' => 'Você só pode atualizar suas próprias tarefas'
+            ], 403);
+        }
+        
+        // Validação dos dados
+        $validator = Validator::make($request->all(), [
+            'description' => 'sometimes|required|string|min:3|max:500',
+            'status' => 'sometimes|required|string|in:pendente,em progresso,concluida,cancelada'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Dados inválidos',
+                'messages' => $validator->errors()
+            ], 400);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            // Guardar dados para log antes da atualização
+            $taskData = [
+                'task_id' => $task->id,
+                'user_id' => $task->user_id,
+                'description' => $task->description,
+                'status' => $task->status,
+                'created_at' => $task->created_at->toISOString()
+            ];
+            
+            // Atualizar apenas campos fornecidos
+            $task->fill($validated);
+            $task->save();
+            
+            // Log da atualização
+            $this->logOperation('task_updated', [
+                'task_id' => $task->id,
+                'updated_by' => $user->id,
+                'old_data' => $taskData,
+                'new_data' => $task->toArray(),
+                'updated_at' => $task->updated_at->toISOString()
+            ]);
+            
+            // Limpar cache relacionado
+            $this->cacheService->invalidateUserCache($task->user_id);
+            if ($user->isAdmin()) {
+                $this->cacheService->clearAllTasksCache();
+            }
+            
+            return response()->json([
+                'message' => 'Tarefa atualizada com sucesso',
+                'data' => $task->fresh()
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->logError('task_update_error', $e, [
+                'task_id' => $taskId,
+                'user_id' => $user->id,
+                'request_data' => $validated
+            ]);
+            
+            return response()->json([
+                'error' => 'Erro interno do servidor',
+                'message' => 'Não foi possível atualizar a tarefa'
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/tasks/{taskId}",
+     *     tags={"Tasks"},
+     *     summary="Excluir tarefa",
+     *     description="Exclui uma tarefa existente. Usuários comuns só podem excluir suas próprias tarefas",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="taskId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tarefa excluída com sucesso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Tarefa excluída com sucesso"),
+     *             @OA\Property(property="task_id", type="string", example="1")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Tarefa não encontrada"),
+     *     @OA\Response(response=403, description="Acesso negado - não é proprietário da tarefa")
+     * )
+     */
+    public function destroy(Request $request, $taskId)
+    {
+        $user = $request->attributes->get('auth_user');
+        
+        // Validação do ID
+        if (!is_numeric($taskId) || $taskId <= 0) {
+            return response()->json([
+                'error' => 'ID inválido',
+                'message' => 'O ID da tarefa deve ser um número positivo.'
+            ], 400);
+        }
+        
+        // Buscar tarefa
+        $task = Task::find($taskId);
+        if (!$task) {
+            return response()->json([
+                'error' => 'Tarefa não encontrada',
+                'message' => "Tarefa com ID {$taskId} não existe."
+            ], 404);
+        }
+        
+        // Verificar se usuário pode excluir esta tarefa
+        if ($user->isUser() && $task->user_id !== $user->id) {
+            return response()->json([
+                'error' => 'Acesso negado',
+                'message' => 'Você só pode excluir suas próprias tarefas'
+            ], 403);
+        }
+        
+        try {
+            // Guardar dados para log antes da exclusão
+            $taskData = [
+                'task_id' => $task->id,
+                'user_id' => $task->user_id,
+                'description' => $task->description,
+                'status' => $task->status,
+                'created_at' => $task->created_at->toISOString()
+            ];
+            
+            // Excluir tarefa
+            $task->delete();
+            
+            // Log da exclusão
+            $this->logOperation('task_deleted', [
+                'deleted_by' => $user->id,
+                'deleted_at' => now()->toISOString(),
+                'task_data' => $taskData
+            ]);
+            
+            // Limpar cache relacionado
+            $this->cacheService->invalidateUserCache($taskData['user_id']);
+            if ($user->isAdmin()) {
+                $this->cacheService->clearAllTasksCache();
+            }
+            
+            return response()->json([
+                'message' => 'Tarefa excluída com sucesso',
+                'task_id' => (string)$taskId
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->logError('task_deletion_error', $e, [
+                'task_id' => $taskId,
+                'user_id' => $user->id
+            ]);
+            
+            return response()->json([
+                'error' => 'Erro interno do servidor',
+                'message' => 'Não foi possível excluir a tarefa'
+            ], 500);
         }
     }
 

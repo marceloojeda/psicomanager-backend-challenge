@@ -162,15 +162,28 @@ class TaskCacheService
             'task:*'
         ];
 
-        foreach ($patterns as $pattern) {
-            // No Redis, podemos usar KEYS, mas cuidado em produção
-            try {
-                $keys = Cache::getStore()->connection()->keys($pattern);
-                if (!empty($keys)) {
-                    Cache::getStore()->connection()->del($keys);
+        $store = Cache::getStore();
+        
+        // Verificar se é Redis (tem método connection)
+        if (method_exists($store, 'connection')) {
+            foreach ($patterns as $pattern) {
+                try {
+                    $keys = $store->connection()->keys($pattern);
+                    if (!empty($keys)) {
+                        $store->connection()->del($keys);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Erro ao limpar cache com pattern {$pattern}: " . $e->getMessage());
                 }
+            }
+        } else {
+            // Para outros tipos de store (como ArrayStore nos testes), limpar manualmente
+            // Usar flush() como fallback (remove tudo, mas é mais seguro)
+            try {
+                Cache::flush();
+                Log::info('Cache limpo usando flush() para store: ' . get_class($store));
             } catch (\Exception $e) {
-                Log::warning("Erro ao limpar cache com pattern {$pattern}: " . $e->getMessage());
+                Log::warning("Erro ao limpar cache: " . $e->getMessage());
             }
         }
 

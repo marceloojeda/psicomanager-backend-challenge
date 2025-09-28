@@ -119,6 +119,20 @@
                 <li>Todas as outras rotas requerem JWT no header Authorization</li>
             </ul>
         </div>
+        <div style="background: #e6f3ff; border: 1px solid #b3d9ff; border-radius: 5px; padding: 15px; margin-top: 15px;">
+            <h4 style="color: #0066cc; margin-top: 0;">👥 Sistema de Roles (Autorização)</h4>
+            <p style="margin: 5px 0;"><strong>A API possui dois níveis de acesso:</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li><strong>Role "user"</strong> (padrão): Acessa apenas suas próprias tarefas</li>
+                <li><strong>Role "admin"</strong>: Acesso completo a todas as tarefas e gerenciamento de usuários</li>
+            </ul>
+            <p style="margin: 5px 0;"><strong>💼 Criação de usuários:</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li>Campo <code>"role"</code> é <em>opcional</em> no <code>POST /users</code></li>
+                <li>Valores aceitos: <code>"user"</code> ou <code>"admin"</code></li>
+                <li>Se não informado, usuário será criado com role <code>"user"</code></li>
+            </ul>
+        </div>
     </div>
 
     <div id="swagger-ui"></div>

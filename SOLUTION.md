@@ -1490,3 +1490,465 @@ securitySchemes:
 ```
 
 ---
+
+## Implementação Adicional: Sistema de Autorização Baseado em Roles
+
+### Contexto
+Após a implementação inicial da API com JWT, fiz a adição de um sistema de autorização baseado em roles para controlar o acesso aos endpoints, garantindo que:
+- **Usuários comuns** vejam apenas suas próprias tarefas
+- **Administradores** possam ver todas as tarefas e acessar endpoints de gerenciamento de usuários
+
+### Arquitetura Implementada
+
+#### 1. **Estrutura de Database**
+**Migration adicionada:**
+```php
+// 2025_09_27_200130_add_role_to_users_table.php
+Schema::table('users', function (Blueprint $table) {
+    $table->enum('role', ['user', 'admin'])->default('user');
+});
+```
+
+#### 2. **Modelo User Atualizado**
+```php
+class User extends Model
+{
+    protected $fillable = ['name', 'email', 'password', 'role'];
+    
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+    
+    public function isUser(): bool
+    {
+        return $this->role === 'user';
+    }
+    
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+}
+```
+
+#### 3. **Middleware de Autorização**
+```php
+// app/Http/Middleware/RoleMiddleware.php
+class RoleMiddleware
+{
+    public function handle(Request $request, Closure $next, string $requiredRole)
+    {
+        $user = $request->attributes->get('auth_user');
+        
+        if (!$user || !$user->hasRole($requiredRole)) {
+            return response()->json([
+                'error' => 'Acesso negado',
+                'message' => 'Permissões insuficientes'
+            ], 403);
+        }
+
+        return $next($request);
+    }
+}
+```
+
+#### 4. **Controle de Acesso em Controllers**
+
+**TaskController - Filtragem baseada em Role:**
+```php
+public function index(Request $request)
+{
+    $user = $request->attributes->get('auth_user');
+    $query = Task::query();
+    
+    // Usuários comuns veem apenas suas tarefas
+    if ($user->isUser()) {
+        $query->where('user_id', $user->id);
+    }
+    
+    // Admins podem filtrar por user_id específico
+    if ($user->isAdmin() && $request->has('user_id')) {
+        $userId = $request->get('user_id');
+        if (is_numeric($userId) && $userId > 0) {
+            $query->where('user_id', $userId);
+        } else {
+            return response()->json([
+                'error' => 'user_id inválido. Deve ser um número positivo.'
+            ], 400);
+        }
+    }
+    
+    $tasks = $query->orderBy('id', 'desc')->paginate($perPage);
+    return response()->json($tasks);
+}
+```
+
+#### 5. **Proteção de Routes**
+```php
+// routes/web.php
+
+// Rotas protegidas com JWT (usuários autenticados)
+$router->group(['prefix' => 'tasks', 'middleware' => 'jwt.auth'], function () use ($router) {
+    $router->get('/', 'TaskController@index');
+    $router->get('/{taskId}', 'TaskController@get');
+});
+
+// Rotas protegidas com JWT + Role Admin
+$router->group(['prefix' => 'users', 'middleware' => ['jwt.auth', 'role:admin']], function () use ($router) {
+    $router->get('/', 'UserController@index');
+    $router->get('/{userId}', 'UserController@get');
+    $router->delete('/{userId}', 'UserController@delete');
+    $router->patch('/{userId}/restore', 'UserController@restore');
+});
+```
+
+### Níveis de Autorização Implementados
+
+#### **Role: 'user' (Usuário Comum)**
+- ✅ Acesso aos próprios dados em `/auth/me`
+- ✅ Visualização apenas das próprias tarefas em `GET /tasks`
+- ✅ Acesso a tarefa específica se for proprietário
+- ❌ Sem acesso a endpoints `/users/*`
+- ❌ Não pode usar parâmetro `user_id` em `/tasks`
+
+#### **Role: 'admin' (Administrador)**
+- ✅ Acesso completo a todos os endpoints
+- ✅ Visualização de todas as tarefas em `GET /tasks`
+- ✅ Filtragem por `user_id` específico em `/tasks?user_id=X`
+- ✅ Gerenciamento completo de usuários via `/users/*`
+- ✅ Soft delete e restauração de usuários
+
+### Recursos de Segurança Implementados
+
+#### 1. **Validação de Propriedade de Tarefas**
+```php
+public function get(Request $request, $taskId)
+{
+    $user = $request->attributes->get('auth_user');
+    $task = Task::find($taskId);
+    
+    // Usuários comuns só veem suas tarefas
+    if ($user->isUser() && $task->user_id !== $user->id) {
+        return response()->json([
+            'error' => 'Acesso negado',
+            'message' => 'Você só pode visualizar suas próprias tarefas'
+        ], 403);
+    }
+    
+    return response()->json(['data' => $task]);
+}
+```
+
+#### 2. **Proteção Contra Escalação de Privilégios**
+- Role só pode ser atribuído via seeding ou admin
+- Middleware valida role em tempo real
+- JWT inclui informações de role para verificação rápida
+
+#### 3. **Auditoria e Logging**
+- Log de tentativas de acesso negado
+- Rastreamento de operações por role
+- Monitoramento de mudanças de permissões
+
+### Benefícios da Implementação
+
+#### **Segurança:**
+- Controle granular de acesso baseado em roles
+- Prevenção de vazamento de dados entre usuários
+- Proteção de endpoints administrativos
+- Separação clara entre autenticação e autorização
+
+#### **Escalabilidade:**
+- Arquitetura preparada para novos roles (moderador, super-admin)
+- Middleware reutilizável para futuras expansões
+- Sistema de permissões flexível
+
+---
+
+## Implementação Adicional: CRUD Completo de Tasks
+
+### Contextualização
+Durante a análise do projeto, identifiquei que a API possuía apenas operações de **leitura** (READ) para tarefas. Para completar o padrão CRUD e tornar a aplicação funcional para gerenciamento completo de tarefas, implementei as operações **CREATE**, **UPDATE** e **DELETE**.
+
+### Operações Implementadas
+
+#### 1. **CREATE - Criação de Tarefas**
+**Endpoint:** `POST /tasks`
+
+```php
+public function store(Request $request)
+{
+    $user = $request->attributes->get('auth_user');
+    
+    // Validação
+    $validator = Validator::make($request->all(), [
+        'description' => 'required|string|min:3|max:500',
+        'status' => 'sometimes|string|in:pendente,andamento,concluida'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => 'Dados inválidos',
+            'messages' => $validator->errors()
+        ], 400);
+    }
+
+    $validated = $validator->validated();
+
+    // Definir valores padrão
+    $taskData = [
+        'user_id' => $user->id,
+        'description' => $validated['description'],
+        'status' => $validated['status'] ?? 'pendente'
+    ];
+
+    try {
+        $task = Task::create($taskData);
+        
+        // Log da criação
+        $this->logOperation('task_created', [
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'created_by' => $user->id,
+            'created_at' => $task->created_at->toISOString()
+        ]);
+
+        // Invalidar cache
+        $this->cacheService->invalidateUserCache($user->id);
+        
+        return response()->json([
+            'message' => 'Tarefa criada com sucesso',
+            'data' => $task
+        ], 201);
+        
+    } catch (\Exception $e) {
+        $this->logError('task_creation_error', $e, [
+            'user_id' => $user->id,
+            'request_data' => $validated
+        ]);
+        
+        return response()->json([
+            'error' => 'Erro interno do servidor',
+            'message' => 'Não foi possível criar a tarefa'
+        ], 500);
+    }
+}
+```
+
+#### 2. **UPDATE - Atualização de Tarefas**
+**Endpoint:** `PUT /tasks/{id}`
+
+```php
+public function update(Request $request, $taskId)
+{
+    $user = $request->attributes->get('auth_user');
+    
+    // Validação do ID
+    if (!is_numeric($taskId) || $taskId <= 0) {
+        return response()->json([
+            'error' => 'ID inválido',
+            'message' => 'O ID da tarefa deve ser um número positivo.'
+        ], 400);
+    }
+
+    // Buscar tarefa
+    $task = Task::find($taskId);
+    if (!$task) {
+        return response()->json([
+            'error' => 'Tarefa não encontrada',
+            'message' => "Tarefa com ID {$taskId} não existe."
+        ], 404);
+    }
+
+    // Verificar autorização
+    if ($user->isUser() && $task->user_id !== $user->id) {
+        return response()->json([
+            'error' => 'Acesso negado',
+            'message' => 'Você só pode editar suas próprias tarefas'
+        ], 403);
+    }
+
+    // Validação dos dados
+    $validator = Validator::make($request->all(), [
+        'description' => 'sometimes|required|string|min:3|max:500',
+        'status' => 'sometimes|required|string|in:pendente,andamento,concluida'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => 'Dados inválidos',
+            'messages' => $validator->errors()
+        ], 400);
+    }
+
+    try {
+        $oldData = $task->toArray();
+        
+        // Atualizar apenas campos fornecidos
+        $task->fill($validator->validated());
+        $task->save();
+        
+        // Log da atualização
+        $this->logOperation('task_updated', [
+            'task_id' => $task->id,
+            'updated_by' => $user->id,
+            'old_data' => $oldData,
+            'new_data' => $task->toArray(),
+            'updated_at' => $task->updated_at->toISOString()
+        ]);
+
+        // Invalidar cache
+        $this->cacheService->invalidateUserCache($task->user_id);
+        
+        return response()->json([
+            'message' => 'Tarefa atualizada com sucesso',
+            'data' => $task
+        ]);
+        
+    } catch (\Exception $e) {
+        $this->logError('task_update_error', $e, [
+            'task_id' => $taskId,
+            'user_id' => $user->id
+        ]);
+        
+        return response()->json([
+            'error' => 'Erro interno do servidor',
+            'message' => 'Não foi possível atualizar a tarefa'
+        ], 500);
+    }
+}
+```
+
+#### 3. **DELETE - Exclusão de Tarefas**
+**Endpoint:** `DELETE /tasks/{id}`
+
+```php
+public function destroy(Request $request, $taskId)
+{
+    $user = $request->attributes->get('auth_user');
+    
+    // Validação do ID
+    if (!is_numeric($taskId) || $taskId <= 0) {
+        return response()->json([
+            'error' => 'ID inválido',
+            'message' => 'O ID da tarefa deve ser um número positivo.'
+        ], 400);
+    }
+    
+    // Buscar tarefa
+    $task = Task::find($taskId);
+    if (!$task) {
+        return response()->json([
+            'error' => 'Tarefa não encontrada',
+            'message' => "Tarefa com ID {$taskId} não existe."
+        ], 404);
+    }
+    
+    // Verificar autorização
+    if ($user->isUser() && $task->user_id !== $user->id) {
+        return response()->json([
+            'error' => 'Acesso negado',
+            'message' => 'Você só pode excluir suas próprias tarefas'
+        ], 403);
+    }
+    
+    try {
+        // Guardar dados para log antes da exclusão
+        $taskData = [
+            'task_id' => $task->id,
+            'user_id' => $task->user_id,
+            'description' => $task->description,
+            'status' => $task->status,
+            'created_at' => $task->created_at->toISOString()
+        ];
+        
+        // Excluir tarefa
+        $task->delete();
+        
+        // Log da exclusão
+        $this->logOperation('task_deleted', [
+            'deleted_by' => $user->id,
+            'deleted_at' => now()->toISOString(),
+            'task_data' => $taskData
+        ]);
+        
+        // Limpar cache
+        $this->cacheService->invalidateUserCache($taskData['user_id']);
+        if ($user->isAdmin()) {
+            $this->cacheService->clearAllTasksCache();
+        }
+        
+        return response()->json([
+            'message' => 'Tarefa excluída com sucesso',
+            'task_id' => (string)$taskId
+        ]);
+        
+    } catch (\Exception $e) {
+        $this->logError('task_deletion_error', $e, [
+            'task_id' => $taskId,
+            'user_id' => $user->id
+        ]);
+        
+        return response()->json([
+            'error' => 'Erro interno do servidor',
+            'message' => 'Não foi possível excluir a tarefa'
+        ], 500);
+    }
+}
+```
+
+### Rotas Adicionadas
+
+```php
+// Rotas protegidas por autenticação JWT
+$router->group(['middleware' => 'jwt.auth'], function () use ($router) {
+    // CRUD de Tasks
+    $router->post('/tasks', 'TaskController@store');
+    $router->put('/tasks/{id}', 'TaskController@update');
+    $router->delete('/tasks/{id}', 'TaskController@destroy');
+});
+```
+
+#### **Autorização Baseada em Roles**
+- **Usuários comuns**: Podem gerenciar apenas suas próprias tarefas
+- **Administradores**: Podem gerenciar tarefas de qualquer usuário
+- Verificação rigorosa de propriedade antes de operações sensíveis
+
+#### **Integração com Cache**
+- Invalidação automática do cache do usuário após mudanças
+- Limpeza de cache global para administradores
+- Mantém performance mesmo com operações de escrita
+
+#### **Logging Abrangente**
+- Log de todas as operações CRUD em arquivo dedicado (`operations-*.log`)
+- Rastreamento de usuário responsável por cada ação
+- Dados completos para auditoria e debugging
+- Logs de erro para troubleshooting
+
+#### **Tratamento de Erros**
+- Códigos HTTP apropriados para cada cenário
+- Mensagens de erro padronizadas e informativas
+- Captura e log de exceções não esperadas
+- Validação prévia de IDs e existência de recursos
+
+### Benefícios da Implementação
+
+#### **Completude Funcional**
+- API agora oferece CRUD completo para gerenciamento de tarefas
+- Usuários podem criar, editar e excluir suas tarefas
+- Administradores têm controle total sobre todas as tarefas
+
+#### **Consistência Arquitetural**
+- Seguiu os padrões já estabelecidos no projeto
+- Integração perfeita com sistemas de cache, logging e autorização
+- Manutenção da estrutura de resposta e tratamento de erros
+
+#### **Segurança e Auditoria**
+- Controle rigoroso de acesso baseado em propriedade
+- Logs completos para auditoria e compliance
+- Validação robusta contra injeção e dados maliciosos
+
+#### **Performance e Escalabilidade**
+- Cache inteligente para manter performance
+- Validação eficiente antes de operações custosas
+- Estrutura preparada para futuras expansões

@@ -121,11 +121,11 @@ class LoggingTest extends TestCase
 
     /**
      * Test that task creation is logged
-     * TODO: Implementar quando CRUD de tasks estiver completo
      */
     public function test_task_creation_logged()
     {
-        $this->markTestSkipped('CRUD de tasks não implementado ainda');
+        // Authenticate with unique user
+        $this->authenticateUser(['email' => 'task-create-' . time() . '@test.com']);
         
         $taskData = [
             'description' => 'Logging Test Task',
@@ -144,20 +144,22 @@ class LoggingTest extends TestCase
 
     /**
      * Test that task updates are logged
-     * TODO: Implementar quando CRUD de tasks estiver completo
      */
     public function test_task_update_logged()
     {
-        $this->markTestSkipped('CRUD de tasks não implementado ainda');
+        // Authenticate with unique user
+        $this->authenticateUser(['email' => 'task-update-' . time() . '@test.com']);
         
-        // Create a task first
-        $task = Task::create([
-            'user_id' => 1, // Using existing user
+        // Create a task first through API
+        $taskResponse = $this->authenticatedPost('/tasks', [
             'description' => 'Original Task Description',
             'status' => 'pendente'
         ]);
+        $this->assertEquals(201, $taskResponse->response->getStatusCode());
+        $taskData = json_decode($taskResponse->response->getContent(), true);
+        $taskId = $taskData['data']['id'];
 
-        $response = $this->authenticatedPatch("/tasks/{$task->id}", [
+        $response = $this->authenticatedPut("/tasks/{$taskId}", [
             'description' => 'Updated Task Description',
             'status' => 'concluida'
         ]);
@@ -172,27 +174,29 @@ class LoggingTest extends TestCase
 
     /**
      * Test that task deletion is audited
-     * TODO: Implementar quando CRUD de tasks estiver completo
      */
     public function test_task_deletion_audited()
     {
-        $this->markTestSkipped('CRUD de tasks não implementado ainda');
+        // Authenticate with unique user
+        $this->authenticateUser(['email' => 'task-delete-' . time() . '@test.com']);
         
-        // Create a task first
-        $task = Task::create([
-            'user_id' => 1,
+        // Create a task first through API
+        $taskResponse = $this->authenticatedPost('/tasks', [
             'description' => 'Task to Delete',
             'status' => 'pendente'
         ]);
+        $this->assertEquals(201, $taskResponse->response->getStatusCode());
+        $taskData = json_decode($taskResponse->response->getContent(), true);
+        $taskId = $taskData['data']['id'];
 
-        $response = $this->authenticatedDelete("/tasks/{$task->id}");
+        $response = $this->authenticatedDelete("/tasks/{$taskId}");
         $this->assertEquals(200, $response->response->getStatusCode());
 
-        // Check audit log
-        $auditLogFile = storage_path('logs/audit-' . Carbon::now()->format('Y-m-d') . '.log');
-        $auditContent = file_get_contents($auditLogFile);
-        $this->assertStringContainsString('task_deleted', $auditContent);
-        $this->assertStringContainsString('Task to Delete', $auditContent);
+        // Check operation log
+        $operationLogFile = storage_path('logs/operations-' . Carbon::now()->format('Y-m-d') . '.log');
+        $operationContent = file_get_contents($operationLogFile);
+        $this->assertStringContainsString('task_deleted', $operationContent);
+        $this->assertStringContainsString('Task to Delete', $operationContent);
     }
 
     /**
