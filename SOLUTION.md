@@ -1952,3 +1952,25 @@ $router->group(['middleware' => 'jwt.auth'], function () use ($router) {
 - Cache inteligente para manter performance
 - Validação eficiente antes de operações custosas
 - Estrutura preparada para futuras expansões
+
+---
+
+## Sobre Clean Architecture
+
+### Por que não implementei
+
+Inicialmente, **eu queria migrar todo o projeto para Clean Architecture** como foi sugerido no case.
+
+**Mas...**
+
+1. **Prazo apertado** - Não daria tempo de refatorar tudo e ainda entregar algo funcional
+2. **Minha experiência** - Conheço a teoria, mas na prática minha experiência com Clean Architecture em PHP é limitada
+3. **Risco alto** - Preferi entregar algo que funciona 100% do que algo bonito mas quebrado
+
+### O que fiz então
+
+Mantive o **MVC do Laravel/Lumen** mesmo, mas apliquei boas práticas:
+- Controllers enxutos focados só em HTTP
+- Services para lógica de negócio  
+- Dependency Injection em tudo
+- Código testável e organizado
