@@ -27,8 +27,19 @@ class UserFactory extends Factory
             'name' => $this->faker->name,
             'email' => $this->faker->unique()->safeEmail,
             'password' => $hashedPassword,
+            'role' => 'user', // Padrão é user
             'email_verified_at' => date('Y-m-d H:i:s'),
             'remember_token' => Str::random(10)
         ];
+    }
+
+    /**
+     * Create admin user state
+     */
+    public function admin()
+    {
+        return $this->state([
+            'role' => 'admin'
+        ]);
     }
 }

@@ -17,4 +17,13 @@ class Task extends Model
     protected $fillable = [
         'user_id', 'description', 'status'
     ];
+
+    /**
+     * Relationship with user
+     * Includes soft deleted users to prevent orphaned tasks
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class)->withTrashed();
+    }
 }

@@ -1,0 +1,54 @@
+{
+  "info": {
+    "name": "PsicoManager JWT Workspace",
+    "description": "Workspace completo para testes da API PsicoManager com autenticação JWT",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "collections": [
+    {
+      "id": "psicomanager-jwt-collection",
+      "name": "PsicoManager API Collection (JWT Auth)",
+      "description": "Collection principal com todos os endpoints protegidos por JWT"
+    }
+  ],
+  "environments": [
+    {
+      "id": "psicomanager-env",
+      "name": "PsicoManager Environment", 
+      "values": [
+        {
+          "key": "base_url",
+          "value": "http://localhost:8888"
+        },
+        {
+          "key": "test_email",
+          "value": "test.postman@example.com"
+        },
+        {
+          "key": "test_password", 
+          "value": "password123"
+        }
+      ]
+    }
+  ],
+  "globals": [],
+  "headerPresets": [
+    {
+      "name": "JWT Auth Headers",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        },
+        {
+          "key": "Content-Type", 
+          "value": "application/json"
+        },
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ]
+    }
+  ]
+}

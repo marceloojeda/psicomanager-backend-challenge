@@ -21,6 +21,13 @@ services:
     volumes:
       - ./:/var/www/html
     working_dir: /var/www/html
+    environment:
+      # JWT Configuration
+      - JWT_SECRET=psicomanager_super_secret_key
+      - JWT_EXPIRATION=3600
+      - JWT_REFRESH_EXPIRATION=2592000
+      - JWT_ISSUER=http://localhost:8888
+      - JWT_AUDIENCE=psicomanager-api
     depends_on:
       - mysql
     networks:
@@ -45,6 +52,21 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis_container
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
